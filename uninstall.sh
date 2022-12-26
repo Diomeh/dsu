@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Install all the scripts in ./src to /usr/local/bin
-
+# Uninstall all the scripts in /usr/local/bin
 # This script is meant to be run as root, but it will prompt for a password
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
     echo "Please run as root"
@@ -16,21 +16,21 @@ INSTALL_DIR="/usr/local/bin"
 
 # Make sure the install directory exists
 if [ ! -d "$INSTALL_DIR" ]; then
-    echo "Creating install directory $INSTALL_DIR"
-    mkdir -p $INSTALL_DIR
+    echo "Install directory $INSTALL_DIR does not exist"
+    exit
 fi
 
-echo "Installing scripts from $SRC_DIR to $INSTALL_DIR"
+echo "Uninstalling scripts from $INSTALL_DIR"
 
-# Install each script in ./src, removing the .sh extension
+# Uninstall each script in ./src, removing the .sh extension
 for script in $SRC_DIR/*; do
-    chmod +x $script
-
     script_name=$(basename $script)
     script_name=${script_name%.*}
 
-    echo "Installing: $INSTALL_DIR/$script_name"
+    echo "Uninstalling $INSTALL_DIR/$script_name"
 
-    ln -sf $script $INSTALL_DIR/$script_name
-    chmod +x $INSTALL_DIR/$script_name
+    # Remove the script if it already exists
+    if [ -f "$INSTALL_DIR/$script_name" ]; then
+        rm $INSTALL_DIR/$script_name
+    fi
 done
