@@ -46,7 +46,7 @@ fi
 # If second argument is not specified, set the output variable to the current directory
 if [ -z "$2" ]; then
     output="."
-else 
+else
     output="$2"
 fi
 
@@ -55,8 +55,56 @@ if [ ! -d "$output" ]; then
     mkdir -p "$output"
 fi
 
-# Extract the file
-case "$file" in
+# If -l is specified, list the contents of the file
+if [[ "$@" == *"-l"* ]]; then
+    case "$file" in
+    *.7z)
+        7z l "$file"
+        ;;
+    *.zip)
+        unzip -l "$file"
+        ;;
+    *.rar)
+        unrar l "$file"
+        ;;
+    *.gz)
+        tar -tzf "$file"
+        ;;
+    *.bz2)
+        tar -tjf "$file"
+        ;;
+    *.xz)
+        tar -tJf "$file"
+        ;;
+    *.tar)
+        tar -tf "$file"
+        ;;
+    *.tgz)
+        tar -tzf "$file"
+        ;;
+    *.tar.gz)
+        tar -tzf "$file"
+        ;;
+    *.tar.bz2)
+        tar -tjf "$file"
+        ;;
+    *.tar.xz)
+        tar -tJf "$file"
+        ;;
+    *.tar.7z)
+        7z l "$file"
+        ;;
+    *)
+        echo "$0 Error: $file is not a supported file type"
+        echo ""
+        usage
+        exit 1
+        ;;
+    esac
+else
+    echo "Extracting $file to $output"
+    # Extract the file
+    case "$file" in
     *.7z)
         7z x "$file" -o"$output"
         ;;
@@ -99,4 +147,5 @@ case "$file" in
         usage
         exit 1
         ;;
-esac
+    esac
+fi
