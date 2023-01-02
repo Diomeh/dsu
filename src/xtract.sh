@@ -48,6 +48,11 @@ if [ -z "$2" ]; then
     output="."
 else
     output="$2"
+
+    # If the second argument starts with a - but is not -l, print usage
+    if [[ "$2" == -* ]] && [[ "$2" != "-l" ]]; then
+        usage
+    fi
 fi
 
 # Create the output directory if it doesn't exist
