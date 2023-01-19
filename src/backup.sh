@@ -14,6 +14,8 @@ usage() {
     echo "If the backup directory is not specified, the backup file will be generated in the current directory."
     echo "If the backup directory does not exist, it will be created (assuming correct permissions are set)."
     echo ""
+    echo "When performing a restore operation, the optional argument <backup directory> is ignored."
+    echo ""
     echo "The backup file or directory will be named as follows:"
     echo "  <backup directory>/<filename>.<timestamp>.backup"
     echo ""
@@ -37,22 +39,26 @@ prepare_backup_dir() {
     fi
 }
 
-# check that the number of arguments is correct
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    usage
-    exit 1
+# if first argument is either -b or --backup, then there must be 2 or 3 arguments
+if [ "$1" == "-b" ] || [ "$1" == "--backup" ]; then
+    if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+        usage
+        exit 1
+    fi
 fi
 
-# check that the mode is valid
-if [ "$1" != "-b" ] && [ "$1" != "--backup" ] && [ "$1" != "-r" ] && [ "$1" != "--restore" ] && [ "$1" != "-h" ] && [ "$1" != "--help" ]; then
-    usage
-    exit 1
+# if first argument is either -r or --restore, then there must be 2 arguments
+if [ "$1" == "-r" ] || [ "$1" == "--restore" ]; then
+    if [ $# -ne 2 ]; then
+        usage
+        exit 1
+    fi
 fi
 
-# if the mode is help, display the help message
+# if first argument is either -h or --help, print usage and exit
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
     usage
-    exit 0
+    exit 1
 fi
 
 mode="$1"
