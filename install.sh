@@ -24,13 +24,28 @@ echo "Installing scripts from $SRC_DIR to $INSTALL_DIR"
 
 # Install each script in ./src, removing the .sh extension
 for script in $SRC_DIR/*; do
+    # Check that the file extension is .sh
+    if [ "${script##*.}" != "sh" ]; then
+        continue
+    fi
+
+    # Read shebang to ensure it is using the sh interpreter
+    shebang=$(head -n 1 $script)
+    if [ "$shebang" != "#!/bin/sh" ]; then
+        echo "Skipping $script: shebang is not #!/bin/sh"
+        continue
+    fi
+
+    # Make the script executable
     chmod +x $script
 
+    # Get the script name without the extension
     script_name=$(basename $script)
     script_name=${script_name%.*}
 
     echo "Installing: $INSTALL_DIR/$script_name"
 
+    # Create a symlink to the script in the install directory and make it executable
     ln -sf $script $INSTALL_DIR/$script_name
     chmod +x $INSTALL_DIR/$script_name
 done
