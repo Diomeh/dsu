@@ -24,18 +24,6 @@ echo "Installing scripts from $SRC_DIR to $INSTALL_DIR"
 
 # Install each script in ./src, removing the .sh extension
 for script in $SRC_DIR/*; do
-    # Check that the file extension is .sh
-    if [ "${script##*.}" != "sh" ]; then
-        continue
-    fi
-
-    # Read shebang to ensure it is using the sh interpreter
-    shebang=$(head -n 1 $script)
-    if [ "$shebang" != "#!/bin/sh" ]; then
-        echo "Skipping $script: shebang is not #!/bin/sh"
-        continue
-    fi
-
     # Make the script executable
     chmod +x $script
 
