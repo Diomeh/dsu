@@ -2,13 +2,13 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/arg-parser" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/backup" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/cln" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/copy" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/hog" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/paste" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/srun" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/scripts/xtract" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/arg-parser" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/backup" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/cln" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/copy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/hog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/paste" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/srun" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/modules/xtract" vcs="Git" />
   </component>
 </project>
