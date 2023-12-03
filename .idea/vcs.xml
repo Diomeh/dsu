@@ -2,5 +2,12 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/backup" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/cln" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/copy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/hog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/paste" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/srun" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/xtract" vcs="Git" />
   </component>
 </project>

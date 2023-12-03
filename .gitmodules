@@ -1,0 +1,21 @@
+[submodule "scripts/backup"]
+	path = scripts/backup
+	url = git@github.com:Diomeh/backup.git
+[submodule "scripts/cln"]
+	path = scripts/cln
+	url = git@github.com:Diomeh/cln.git
+[submodule "scripts/copy"]
+	path = scripts/copy
+	url = git@github.com:Diomeh/copy.git
+[submodule "scripts/hog"]
+	path = scripts/hog
+	url = git@github.com:Diomeh/hog.git
+[submodule "scripts/paste"]
+	path = scripts/paste
+	url = git@github.com:Diomeh/paste.git
+[submodule "scripts/srun"]
+	path = scripts/srun
+	url = git@github.com:Diomeh/srun.git
+[submodule "scripts/xtract"]
+	path = scripts/xtract
+	url = git@github.com:Diomeh/xtract.git
