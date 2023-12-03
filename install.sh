@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Install all the scripts in ./src to /usr/local/bin
+# Install all the scripts in ./sh to /usr/local/bin
 
 # This script is meant to be run as root, but it will prompt for a password
 # Check if running as root
@@ -22,7 +22,7 @@ fi
 
 echo "Installing scripts from $SRC_DIR to $INSTALL_DIR"
 
-# Install each script in ./src, removing the .sh extension
+# Install each script in ./sh, removing the .sh extension
 for script in $SRC_DIR/*; do
     # Make the script executable
     chmod +x $script

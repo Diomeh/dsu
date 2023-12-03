@@ -22,7 +22,7 @@ fi
 
 echo "Uninstalling scripts from $INSTALL_DIR"
 
-# Uninstall each script in ./src, removing the .sh extension
+# Uninstall each script in ./sh, removing the .sh extension
 for script in $SRC_DIR/*; do
     script_name=$(basename $script)
     script_name=${script_name%.*}
