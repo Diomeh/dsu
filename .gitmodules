@@ -19,3 +19,6 @@
 [submodule "scripts/xtract"]
 	path = scripts/xtract
 	url = git@github.com:Diomeh/xtract.git
+[submodule "scripts/arg-parser"]
+	path = scripts/arg-parser
+	url = git@github.com:Diomeh/arg-parser.git

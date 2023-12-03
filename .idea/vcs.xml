@@ -2,6 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/scripts/arg-parser" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/scripts/backup" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/scripts/cln" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/scripts/copy" vcs="Git" />
