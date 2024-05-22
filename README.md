@@ -7,8 +7,6 @@ A collection of custom dotfiles for Linux
 The installation process consists of creating a symbolic link in `/usr/local/bin` to each script within the `src` directory, 
 removing the `.sh` extension from the symbolic link. This allows the scripts to be run from anywhere on the system.
 
-Before install, both file extension and shebang are checked to ensure the script uses the `sh` shell.
-
 ### Steps
 
 1. Clone the repository
