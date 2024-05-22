@@ -1,4 +1,4 @@
-# shell-scripts
+# dotfiles
 
 A collection of custom shell scripts for Linux
 
