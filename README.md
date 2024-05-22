@@ -1,6 +1,6 @@
 # dotfiles
 
-A collection of custom shell scripts for Linux
+A collection of custom dotfiles for Linux
 
 ## Installation
 
