@@ -3,8 +3,6 @@
 ## Overview
 This project provides a set of shell scripts to handle various file operations including backup, extraction, cleaning, copying, and pasting. It also includes installation and uninstallation scripts to manage the setup of the environment.
 
-## Directory Structure
-
 ## Getting started
 
 ### Installation
