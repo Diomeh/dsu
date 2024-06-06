@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
+#
+# -*- mode: shell-script -*-
 
 # Check if xclip is installed
 if ! command -v xclip > /dev/null; then

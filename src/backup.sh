@@ -1,96 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# -*- mode: shell-script -*-
 
-# This script is used to backup files and directories.
+set -euo pipefail
 
+# Usage function
 usage() {
-    echo "Usage: backup <mode> <path/to/file/or/directory> [backup directory]"
-    echo "Backup and restore files, directories or symlinks."
-    echo ""
-    echo "Mode:"
-    echo "  -b, --backup     Create a timestamped backup of the file or directory"
-    echo "  -r, --restore    Restore the file or directory from a backup"
-    echo "  -h, --help       Display this help message"
-    echo ""
-    echo "If the backup directory is not specified, the backup file will be generated in the current directory."
-    echo "If the backup directory does not exist, it will be created (assuming correct permissions are set)."
-    echo ""
-    echo "When performing a restore operation, the optional argument <backup directory> is ignored."
-    echo ""
-    echo "The backup file or directory will be named as follows:"
-    echo "  <backup directory>/<filename>.<timestamp>.backup"
-    echo ""
-    echo "Examples:"
-    echo "  backup -b /etc/hosts"
-    echo "  backup -b /etc/hosts /home/user/backups"
-    echo "  backup -r /home/user/backups/hosts.2018-01-01_00-00-00.backup"
+    cat <<EOF
+Usage: $(basename "$0") <mode> <path/to/file/or/directory> [backup directory]
+
+Backup and restore files, directories or symlinks.
+
+Mode:
+  -b, --backup     Create a timestamped backup of the file or directory
+  -r, --restore    Restore the file or directory from a backup
+  -h, --help       Display this help message
+
+If the backup directory is not specified, the backup file will be generated in the current directory.
+If the backup directory does not exist, it will be created (assuming correct permissions are set).
+
+When performing a restore operation, the optional argument <backup directory> is ignored.
+
+The backup file or directory will be named as follows:
+  <backup directory>/<filename>.<timestamp>.backup
+
+Examples:
+  $(basename "$0") -b /etc/hosts
+  $(basename "$0") -b /etc/hosts /home/user/backups
+  $(basename "$0") -r /home/user/backups/hosts.2018-01-01_00-00-00.backup
+EOF
 }
 
-prepare_backup_dir() {
-    local backup_dir="$1"
+backup() {
+    local target="$1"
+    local backup_dir="$2"
 
-    # check that the backup directory exists
-    if [ ! -d "$backup_dir" ]; then
-        # try to create the backup directory
-        mkdir -p "$1"
-        if [ $? -ne 0 ]; then
-            echo "backup: '$backup_dir': Could not create backup directory"
-            exit 1
-        fi
-    fi
-}
-
-# if first argument is either -b or --backup, then there must be 2 or 3 arguments
-if [ "$1" == "-b" ] || [ "$1" == "--backup" ]; then
-    if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-        usage
-        exit 1
-    fi
-fi
-
-# if first argument is either -r or --restore, then there must be 2 arguments
-if [ "$1" == "-r" ] || [ "$1" == "--restore" ]; then
-    if [ $# -ne 2 ]; then
-        usage
-        exit 1
-    fi
-fi
-
-# if first argument is either -h or --help, print usage and exit
-if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
-    usage
-    exit 1
-fi
-
-mode="$1"
-target="$2"
-backup_dir="."
-
-# check target exists
-if [ ! -e "$target" ]; then
-    echo "backup: '$target': No such file or directory"
-    exit 1
-fi
-
-# if the backup directory is not specified, use the current directory
-if [ $# -eq 3 ]; then
-    backup_dir="$3"
-    prepare_backup_dir "$backup_dir"
-fi
-
-# check permission on target
-if [ ! -r "$target" ]; then
-    echo "backup: '$target': Permission denied"
-    exit 1
-fi
-
-# check premissions on backup directory
-if [ ! -w "$backup_dir" ]; then
-    echo "backup: '$backup_dir': Permission denied"
-    exit 1
-fi
-
-# if the mode is backup, create a backup
-if [ "$mode" == "-b" ] || [ "$mode" == "--backup" ]; then
     filename=$(basename "$target")
     timestamp=$(date +%Y-%m-%d_%H-%M-%S)
     backup_path="$backup_dir/$filename.$timestamp.backup"
@@ -113,14 +57,15 @@ if [ "$mode" == "-b" ] || [ "$mode" == "--backup" ]; then
     fi
 
     echo "Created backup: $backup_path"
-    exit 0
-fi
+}
 
-# if the mode is restore, restore the backup
-if [ "$mode" == "-r" ] || [ "$mode" == "--restore" ]; then
+restore() {
+    local target="$1"
+    local backup_dir="$2"
+
     # check that the backup exists
     if [ ! -e "$target" ]; then
-        echo "backup: '$target': No such backup"
+        echo "Error: '$target': File not found" >&2
         exit 1
     fi
 
@@ -128,13 +73,13 @@ if [ "$mode" == "-r" ] || [ "$mode" == "--restore" ]; then
     if [[ "$target" =~ ^(.*)\.[0-9]{8}_[0-9]{6}\.backup$ ]]; then
         target="${BASH_REMATCH[1]}"
     else
-        echo "backup: '$target': No such backup"
+        echo "Error: '$target': No such backup" >&2
         exit 1
     fi
 
     # if target exists, then ask for confirmation
     if [ -e "$target" ]; then
-        read -p "$target: File or directory already exists. Overwrite? [y/N] " response
+        read -p "$target: File or directory already exists. Overwrite? [y/N] " -r response
         if [ "$response" != "y" ]; then
             exit 1
         fi
@@ -150,5 +95,71 @@ if [ "$mode" == "-r" ] || [ "$mode" == "--restore" ]; then
     fi
 
     echo "Restored backup: $1 -> $target"
-    exit 0
+}
+
+# Argument parsing
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    usage
+    exit 1
+fi
+
+while getopts ":b:r:h" opt; do
+    case $opt in
+        b | --backup)
+            mode="backup"
+            ;;
+        r | --restore)
+            mode="restore"
+            ;;
+        h)
+            usage
+            exit 0
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            usage
+            exit 1
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+target="$1"
+backup_dir="${2:-.}"  # Default to current directory if backup directory not provided
+
+# Check if target exists
+if [ ! -e "$target" ]; then
+    echo "Error: '$target': No such file or directory" >&2
+    exit 1
+fi
+
+# Prepare backup directory
+prepare_backup_dir() {
+    local backup_dir="$1"
+    if [ ! -d "$backup_dir" ]; then
+        mkdir -p "$backup_dir" || { echo "Error: '$backup_dir': Could not create backup directory" >&2; exit 1; }
+    fi
+}
+prepare_backup_dir "$backup_dir"
+
+# Check permissions
+if [ ! -r "$target" ]; then
+    echo "Error: '$target': Permission denied" >&2
+    exit 1
+fi
+if [ ! -w "$backup_dir" ]; then
+    echo "Error: '$backup_dir': Permission denied" >&2
+    exit 1
+fi
+
+# Perform backup or restore based on mode
+if [ "$mode" == "backup" ]; then
+    backup "$target" "$backup_dir"
+elif [ "$mode" == "restore" ]; then
+    restore "$target" "$backup_dir"
 fi
