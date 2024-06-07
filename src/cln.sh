@@ -28,36 +28,52 @@ replace_special_chars() {
     local newname
     local target
 
-    # Ensure given argument is a file or directory
-    if [ -f "$filepath" ] || [ -d "$filepath" ]; then
-        # Extract filename without directory path
-        filename=$(basename "$filepath")
+    # Check filepath permissions
+    if [ ! -w "$filepath" ]; then
+        echo "Error: $filepath: Permission denied"
+        return
+    fi
 
-        # Replace spaces with underscore and strip non-alphanumeric characters
-        newname=$(echo "$filename" | tr ' ' '_' | tr -s '_' | tr -cd '[:alnum:]_.-')
+    # Extract filename without directory path
+    filename=$(basename "$filepath")
 
-        target="$(dirname "$filepath")/$newname"
+    # Replace spaces with underscore and strip non-alphanumeric characters
+    newname=$(echo "$filename" | tr ' ' '_' | tr -s '_' | tr -cd '[:alnum:]_.-')
 
-        # If the new filename differs from the old one, rename the file
-        if [ "$newname" != "$filename" ]; then
-            echo "Renaming: $filename -> $newname"
+    # If newname is empty, skip
+    if [ -z "$newname" ]; then
+        echo "Error: $filename: new name is empty. Skipping..."
+        return
+    fi
 
-            # Check if exists
-            if [ -e "$target" ]; then
-                read -p "File already exists. Overwrite? [y/N] " -n 1 -r
-                echo ""
-                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                    echo "Skipping $filename"
-                    return
-                else 
-                    rm -rf "$target" # Remove the existing file before renaming
-                fi
-            fi
+    target="$(dirname "$filepath")/$newname"
 
-            mv "$filepath" "$(dirname "$filepath")/$newname"
+    # If names are the same, skip
+    if [ "$filename" == "$newname" ]; then
+        return
+    fi
+
+    echo "Renaming: $filename -> $newname"
+
+    # Check if target file already exists
+    if [ -e "$target" ]; then
+        read -p "File already exists. Overwrite? [y/N] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Skipping $filename"
+            return
+        else 
+            rm -rf "$target" # Remove the existing file before renaming
         fi
     fi
+
+    mv "$filepath" "$target"
 }
+
+# If no arguments are provided, use the current directory
+if [ "$#" -eq 0 ]; then
+    set -- .
+fi
 
 # If -h or --help flag is provided, print usage and exit
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
@@ -67,5 +83,14 @@ fi
 
 # Loop through arguments
 for file in "$@"; do
-    replace_special_chars "$file"
+    # If argument is a directory, loop through all files in the directory
+    if [ -d "$file" ]; then
+        for f in "$file"/*; do
+            replace_special_chars "$f"
+        done
+        continue
+    else 
+        # If argument is a file, replace special characters in the file name
+        replace_special_chars "$file"
+    fi
 done

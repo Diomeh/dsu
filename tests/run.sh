@@ -140,7 +140,98 @@ test_backup() {
 }
 
 test_cln() {
-    print "w" "cln: test not implemented"
+    local workdir="$TEST_DIR/cln" 
+    local workdirtmp="$TMP_DIR/cln"
+    local binary="$SRC_DIR/cln.sh"
+    local outfile="$TMP_DIR/cln.out"
+
+    # Make a copy of the test directory
+    # Needed to avoid modifying the original test files
+    cp -r "$workdir" "$TMP_DIR"
+
+    print "i" "cln: running tests"
+    print "i" "cln: running test with no args"
+
+    touch "$outfile"
+
+    cd "$workdirtmp" || {
+        print "e" "cln: failed to change to test directory"
+        return 1
+    }
+
+    "$binary" > "$outfile"
+    local exit_code=$?
+
+    # Check the exit code of the script
+    if [ "$exit_code" -ne 0 ]; then
+        print "e" "cln: test failed with exit code $exit_code"
+        print "i" "cln: test output:"
+        cat "$outfile"
+        return 1
+    fi
+
+    # Remove lines with "valid" from the expected file to check for no args execution
+    local tmpexp=$(mktemp)
+    grep -v "valid" "$workdir/.expected" > "$tmpexp"
+
+    # Get all files in the test directory and remove the expected and valid files
+    local tmpout=$(mktemp)
+    find "$workdirtmp" -type f -exec basename {} \; | grep -Ev "expected|valid" | sort > "$tmpout"
+
+    # Compare .expected file with the output file
+    result=$(diff -qw "$tmpexp" "$tmpout" | wc -l)
+    if [ "$result" -ne 0 ]; then
+        print "e" "cln: test failed"
+        print "i" "cln: expected output:"
+        cat "$workdir/.expected"
+        print "i" "cln: got:"
+        cat "$tmpout"
+        return 1
+    else
+        print "s" "cln: no args test passed"
+    fi
+
+    cd "$TEST_DIR" || {
+        print "e" "cln: failed to cd into $TEST_DIR directory"
+        return 1
+    }
+
+    print "i" "cln: running test with args"
+
+    # Execute cln.sh with arguments and redirect output to a file
+    "$binary" "$workdirtmp/sub" > "$outfile"
+    exit_code=$?
+
+    # Check the exit code of the script
+    if [ "$exit_code" -ne 0 ]; then
+        print "e" "cln: test failed with exit code $exit_code"
+        print "i" "cln: test output:"
+        cat "$outfile"
+        return 1
+    fi
+
+    # Remove all lines but those containing "valid" from the expected file to check for args execution
+    tmpexp=$(mktemp)
+    grep "valid" "$workdir/.expected" > "$tmpexp"
+
+    # Get all files in the test directory and remove all files but those containing "valid"
+    tmpout=$(mktemp)
+    find "$workdirtmp" -type f -exec basename {} \; | grep "valid" | sort > "$tmpout"
+
+    # Compare .expected file with the output file
+    result=$(diff -qw "$tmpexp" "$tmpout" | wc -l)
+    if [ "$result" -ne 0 ]; then
+        print "e" "cln: test failed"
+        print "i" "cln: expected output:"
+        cat "$workdir/.expected"
+        print "i" "cln: got:"
+        cat "$tmpout"
+        return 1
+    else
+        print "s" "cln: args test passed"
+    fi
+
+    print "s" "cln: all tests passed"
 }
 
 test_copy() {
