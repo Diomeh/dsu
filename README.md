@@ -58,6 +58,41 @@ The installer does the following:
             - Removes the symbolic link from the installation directory.
 - Removes the `./.install` file.
 
+## Usage
+
+### Running globally
+
+Once installed, you can run any of the scripts from anywhere in your system.
+Refer to the help message of each script for usage instructions.
+
+```sh
+backup -h
+```
+
+### Running locally
+
+You can also run the scripts locally by calling them from the `src` directory, just make sure to give them execution permissions:
+
+```sh
+chmod +x ./src/backup.sh
+./src/backup.sh -h
+```
+
+## Local development
+
+### Prerequisites
+
+No additional dependencies are required for local development.
+
+### Building
+
+Altough no building is required for this project, a `build.sh` script is provided to archive the scripts into a `.tar.gz` file.
+
+```sh
+chmod +x build.sh
+./build.sh
+```
+
 ### Running tests
 
 Tests can be written and run using the `tests/run.sh` script. 
@@ -98,26 +133,6 @@ The file tree should look like this:
 │   │   ├── .expected
 │   │   └── ...
 └── ...
-```
-
-## Usage
-
-### Running globally
-
-Once installed, you can run any of the scripts from anywhere in your system.
-Refer to the help message of each script for usage instructions.
-
-```sh
-backup -h
-```
-
-### Running locally
-
-You can also run the scripts locally by calling them from the `src` directory, just make sure to give them execution permissions:
-
-```sh
-chmod +x ./src/backup.sh
-./src/backup.sh -h
 ```
 
 ## Contributing
