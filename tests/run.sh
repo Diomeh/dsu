@@ -269,7 +269,68 @@ test_paste() {
 }
 
 test_xtract() {
-    print "w" "xtract: test not implemented"
+    local workdir="$TEST_DIR/xtract"
+    local binary="$SRC_DIR/xtract.sh"
+    local outfile="$TMP_DIR/xtract.out"
+    local workdirtmp="$TMP_DIR/xtract"
+
+    print "i" "xtract: running tests"
+
+    touch "$outfile"
+
+    # Clone the test directory to avoid modifying the original test files
+    cp -r "$workdir" "$workdirtmp"
+
+    cd "$workdirtmp" || {
+        print "e" "xtract: failed to change to test directory"
+        return 1
+    }
+
+    # Read archives list to avoid iterating over the .expected file or directories
+    local archives=($(find . -maxdepth 1 -type f ! -name "*.expected" -exec basename {} \;))
+
+    # Iterate over each compressed file in the test directory
+    for archive in $archives; do
+        print "i" "xtract: testing $archive"
+
+        # Extract the archive using the script, rewrite output file discarging previous content
+        "$binary" "$archive" 2>&1 > "$outfile"
+        local exit_code=$?
+
+        # Check the exit code of the script
+        if [ "$exit_code" -ne 0 ]; then
+            print "e" "xtract: test failed for $archive with exit code $exit_code"
+            print "i" "xtract: test output:"
+            cat "$outfile"
+            return 1
+        else
+            print "s" "xtract: extraction passed for $archive"
+        fi
+    done
+
+    # Compare .expected with workdirtmp tree
+    # .expected contains the expected directory structure after extraction of all archives
+
+    # Write tmp tree to outfile, skip first line
+    tree "$workdirtmp" | grep -v "expected" | tail -n +2 > "$outfile"
+
+    # Remove workdirtmp
+    rm -rf "$workdirtmp"
+
+    # Compare output files and count differences
+    local result=$(diff -qw "$outfile" "$workdir/.expected" | wc -l)
+
+    if [ "$result" -ne 0 ]; then
+        print "e" "xtract: test failed"
+        print "i" "Expected output:"
+        cat "$workdir/.expected"
+        echo
+        print "i" "Got:"
+        cat "$outfile"
+        return 1
+    fi
+
+    print "s" "xtract: all tests passed"
 }
 
 main() {
