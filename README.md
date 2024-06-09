@@ -58,6 +58,48 @@ The installer does the following:
             - Removes the symbolic link from the installation directory.
 - Removes the `./.install` file.
 
+### Running tests
+
+Tests can be written and run using the `tests/run.sh` script. 
+This script defines all tests that can be ran for every script in the `src` directory.
+
+```sh
+chmod +x tests/run.sh
+./tests/run.sh
+```
+
+For every script there should be a corresponding directory in the `tests` directory with the same name. 
+Inside this directory there should be any files needed and an optional `.expected` file that contains the expected output of the script.
+
+The file tree should look like this:
+
+```
+.
+├── ...
+├── src
+│   ├── backup.sh
+│   ├── cln.sh
+│   ├── copy.sh
+│   ├── hog.sh
+│   ├── paste.sh
+│   └── xtract.sh
+├── tests
+│   ├── backup
+│   │   ├── .expected
+│   │   └── ...
+│   ├── cln
+│   │   ├── .expected
+│   │   └── ...
+│   ├── hog
+│   │   ├── .expected
+│   │   └── ...
+│   ├── run.sh
+│   └── xtract
+│   │   ├── .expected
+│   │   └── ...
+└── ...
+```
+
 ## Usage
 
 ### Running globally
