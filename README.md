@@ -87,6 +87,7 @@ No additional dependencies are required for local development.
 ### Building
 
 Altough no building is required for this project, a `build.sh` script is provided to archive the scripts into a `.tar.gz` file.
+This will create a `./dist` directory with an archive named `shell-scripts-X.Y.Z.tar.gz`, where `X.Y.Z` is the version number of the project; See [VERSION](./VERSION) file.
 
 ```sh
 chmod +x build.sh
