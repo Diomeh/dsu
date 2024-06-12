@@ -27,7 +27,7 @@ check_root() {
 
 parse_arguments() {
     local install_file="$1/.install"
-    local src_dir="$1/src"
+    local src_dir="$1/src/sh"
     local install_dir="/usr/local/bin"
     
     while [[ "$#" -gt 1 ]]; do

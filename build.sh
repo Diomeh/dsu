@@ -16,7 +16,7 @@ EOF
 
 make_tarball() {
     local root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local src_dir="$root_dir/src"
+    local src_dir="$root_dir/src/sh"
     local dist_dir="$root_dir/dist"
     local bin_dir="$dist_dir/bin"
     local version="$(cat "$root_dir/VERSION")"

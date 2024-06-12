@@ -47,7 +47,7 @@ done
 
 # Path to the custom scripts directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$SCRIPT_DIR/src"
+SRC_DIR="$SCRIPT_DIR/src/sh"
 INSTALL_FILE=""$SCRIPT_DIR/.install""
 
 # Make sure the install directory exists

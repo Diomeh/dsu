@@ -1,4 +1,4 @@
-/target
 .idea
 .install
 dist/
+target/
