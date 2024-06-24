@@ -4,7 +4,9 @@ mod copy;
 mod hog;
 mod paste;
 mod xtract;
+mod restore;
 
+use std::path::PathBuf;
 use ambassador::{delegatable_trait, Delegate};
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
@@ -31,6 +33,7 @@ pub trait DRunnable {
 #[delegate(DRunnable)]
 enum DCommand {
     Backup(BackupArgs),
+    Restore(RestoreArgs),
     Cln(ClnArgs),
     Copy(CopyArgs),
     Hog(HogArgs),
@@ -40,6 +43,15 @@ enum DCommand {
 
 #[derive(Args, Debug)]
 pub struct BackupArgs {
+}
+
+#[derive(Args, Debug)]
+pub struct RestoreArgs {
+    /// Source element to be restored
+    source: PathBuf,
+
+    /// Destination to which the source element will be restored (current dir by default)
+    target: Option<PathBuf>,
 }
 
 #[derive(Args, Debug)]
