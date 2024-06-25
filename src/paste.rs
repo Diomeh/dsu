@@ -1,13 +1,28 @@
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{eyre, Result};
+use copypasta::{ClipboardContext, ClipboardProvider};
+use tracing::trace;
 
-use crate::{
-    DRunnable,
-    PasteArgs,
-};
+use crate::{DRunnable, PasteArgs};
 
 impl DRunnable for PasteArgs {
     fn run(&mut self) -> Result<()> {
-        println!("Running PasteArgs");
+        trace!("args: {self:?}");
+
+        let mut ctx = match ClipboardContext::new() {
+            Ok(ctx) => ctx,
+            Err(err) => {
+                return Err(eyre!("Failed to create clipboard context: {}", err));
+            }
+        };
+
+        let contents = match ctx.get_contents() {
+            Ok(contents) => contents,
+            Err(err) => {
+                return Err(eyre!("Failed to get clipboard contents: {}", err));
+            }
+        };
+
+        println!("{}", contents);
         Ok(())
     }
 }

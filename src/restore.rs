@@ -1,7 +1,6 @@
 use color_eyre::eyre;
 use color_eyre::eyre::Result;
 use dialoguer::Confirm;
-use std::path::PathBuf;
 use tracing::{debug, trace, warn};
 
 use crate::{modules::file_keeper::validate_paths, DRunnable, RestoreArgs};
@@ -45,12 +44,11 @@ impl RestoreArgs {
             Some(captures) => captures.get(1).unwrap().as_str(), // filename.ext.timestamp.bak
         };
 
-        let target_path: PathBuf;
-        if target.is_dir() {
-            target_path = target.join(target_filename)
+        let target_path = if target.is_dir() {
+            target.join(target_filename)
         } else {
-            target_path = target.with_file_name(target_filename)
-        }
+            target.with_file_name(target_filename)
+        };
 
         debug!("Copying {:?} to {:?}", source, target_path);
 
