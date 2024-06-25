@@ -6,6 +6,10 @@ mod paste;
 mod xtract;
 mod restore;
 
+mod modules {
+    pub(crate) mod file_keeper;
+}
+
 use std::path::PathBuf;
 use ambassador::{delegatable_trait, Delegate};
 use clap::{Args, Parser, Subcommand};
@@ -34,6 +38,7 @@ pub trait DRunnable {
 enum DCommand {
     /// Creates a timestamped backup of a file or directory
     Backup(BackupArgs),
+    /// Restores a file or directory from a timestamped backup
     Restore(RestoreArgs),
     Cln(ClnArgs),
     Copy(CopyArgs),
@@ -62,6 +67,10 @@ pub struct RestoreArgs {
 
     /// Destination to which the source element will be restored (current dir by default)
     target: Option<PathBuf>,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
 }
 
 #[derive(Args, Debug)]
