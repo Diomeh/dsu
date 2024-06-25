@@ -16,8 +16,8 @@ use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
 
 #[derive(Parser)]
-#[clap(name = "myapp", version = "1.0", author = "Me")]
-#[clap(about = "Does awesome things")]
+#[clap(name = "Diomeh's script utilities (dsu)", author = "David Urbina")]
+#[clap(about = "Set of unix utilities bundled into a single CLI tool")]
 #[command(version, about, long_about = None)]
 struct Cli {
     /// Show debug logs
@@ -40,10 +40,15 @@ enum DCommand {
     Backup(BackupArgs),
     /// Restores a file or directory from a timestamped backup
     Restore(RestoreArgs),
+    /// Removes non-ascii characters from file names
     Cln(ClnArgs),
+    /// Copy STDOUT to clipboard
     Copy(CopyArgs),
+    /// Print disk usage of a directory
     Hog(HogArgs),
+    /// Paste clipboard to STDIN
     Paste(PasteArgs),
+    /// Extracts archives
     Xtract(XtractArgs),
 }
 
@@ -75,6 +80,25 @@ pub struct RestoreArgs {
 
 #[derive(Args, Debug)]
 pub struct ClnArgs {
+    /// Paths to be cleaned
+    #[arg(default_value = ".")]
+    paths: Vec<PathBuf>,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
+
+    /// Clean directories recursively
+    #[arg(long, short = 'r', default_value = "true")]
+    pub recursive: bool,
+
+    /// Recurse depth
+    #[arg(long, short = 'd', default_value = "1")]
+    pub depth: Option<usize>,
+
+    /// Overwrite existing files without prompting
+    #[arg(long, short = 'f', default_value = "auto", value_parser = ["y", "n", "auto"])]
+    pub force: String,
 }
 
 #[derive(Args, Debug)]
