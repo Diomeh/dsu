@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl DRunnable for HogArgs {
-    fn run(&self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         println!("Running HogArgs");
         Ok(())
     }

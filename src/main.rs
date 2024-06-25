@@ -26,12 +26,13 @@ struct Cli {
 
 #[delegatable_trait]
 pub trait DRunnable {
-    fn run(&self) -> Result<()>;
+    fn run(&mut self) -> Result<()>;
 }
 
 #[derive(Subcommand, Debug, Delegate)]
 #[delegate(DRunnable)]
 enum DCommand {
+    /// Creates a timestamped backup of a file or directory
     Backup(BackupArgs),
     Restore(RestoreArgs),
     Cln(ClnArgs),
@@ -43,6 +44,15 @@ enum DCommand {
 
 #[derive(Args, Debug)]
 pub struct BackupArgs {
+    /// Source element to be backed up
+    pub source: PathBuf,
+
+    /// Destination to which the source element will be backed up (current dir by default)
+    pub target: Option<PathBuf>,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
 }
 
 #[derive(Args, Debug)]
@@ -75,4 +85,10 @@ pub struct XtractArgs {
 }
 
 fn main() {
+    let mut cli = Cli::parse();
+    let result = cli.command.run();
+    if let Err(e) = result {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }

@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl DRunnable for PasteArgs {
-    fn run(&self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         println!("Running PasteArgs");
         Ok(())
     }

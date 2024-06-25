@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl DRunnable for CopyArgs {
-    fn run(&self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         println!("Running CopyArgs");
         Ok(())
     }

@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl DRunnable for ClnArgs {
-    fn run(&self) -> Result<()> {
+    fn run(&mut self) -> Result<()> {
         println!("Running ClnArgs");
         Ok(())
     }
