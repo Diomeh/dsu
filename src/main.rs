@@ -107,6 +107,17 @@ pub struct CopyArgs {
 
 #[derive(Args, Debug)]
 pub struct HogArgs {
+    /// Directory to analyze
+    #[arg(default_value = ".")]
+    dir: PathBuf,
+
+    /// Human readable sizes
+    #[arg(long, short = 'H', default_value = "false")]
+    pub human_readable: bool,
+
+    /// Number of items to show
+    #[arg(long, short = 'n', default_value = "10")]
+    pub limit: usize,
 }
 
 #[derive(Args, Debug)]
