@@ -48,7 +48,7 @@ enum DCommand {
     Hog(HogArgs),
     /// Paste clipboard to STDIN
     Paste(PasteArgs),
-    /// Extracts archives
+    /// Archive extraction utility
     Xtract(XtractArgs),
 }
 
@@ -126,6 +126,20 @@ pub struct PasteArgs {
 
 #[derive(Args, Debug)]
 pub struct XtractArgs {
+    /// Archive to extract
+    archive: PathBuf,
+
+    /// Destination directory
+    #[arg(default_value = ".")]
+    destination: PathBuf,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
+
+    /// List files in archive
+    #[arg(long, short = 'l')]
+    pub list: bool,
 }
 
 fn main() {

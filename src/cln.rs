@@ -99,25 +99,23 @@ impl ClnArgs {
             }
         } else if self.force == "auto" {
             // prompt and warn about single _ names and empty names
-            if clean_filename.is_empty() || clean_filename == "_" {
-                if !Confirm::new()
-                    .with_prompt(format!("File {:?}, would rename to {:?}. Do you wish to proceed?", filename, clean_filename))
-                    .interact()
-                    .unwrap()
-                {
-                    return;
-                }
+            
+
+            if (clean_filename.is_empty() || clean_filename == "_") && !Confirm::new()
+                .with_prompt(format!("File {:?}, would rename to {:?}. Do you wish to proceed?", filename, clean_filename))
+                .interact()
+                .unwrap()
+            {
+                return;
             }
 
             // prompt for confirmation if exists
-            if clean_path.exists() {
-                if !Confirm::new()
-                    .with_prompt(format!("Overwrite existing file at {:?}?", clean_path))
-                    .interact()
-                    .unwrap()
-                {
-                    return;
-                }
+            if clean_path.exists() && !Confirm::new()
+                .with_prompt(format!("Overwrite existing file at {:?}?", clean_path))
+                .interact()
+                .unwrap()
+            {
+                return;
             }
         }
 
