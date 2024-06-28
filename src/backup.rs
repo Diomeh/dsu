@@ -5,9 +5,9 @@ use std::fs;
 use std::path::PathBuf;
 use tracing::{debug, trace, warn};
 
-use crate::{modules::file_keeper::validate_paths, BackupArgs, DRunnable};
+use crate::{modules::file_keeper::validate_paths, BackupArgs, Runnable};
 
-impl DRunnable for BackupArgs {
+impl Runnable for BackupArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {self:?}");
 

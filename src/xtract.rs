@@ -8,9 +8,9 @@ use std::{
 use tempfile::tempdir;
 use tracing::trace;
 
-use crate::{DRunnable, XtractArgs};
+use crate::{Runnable, XtractArgs};
 
-impl DRunnable for XtractArgs {
+impl Runnable for XtractArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {self:?}");
 

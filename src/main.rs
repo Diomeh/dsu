@@ -29,12 +29,12 @@ struct Cli {
 }
 
 #[delegatable_trait]
-pub trait DRunnable {
+pub trait Runnable {
     fn run(&mut self) -> Result<()>;
 }
 
 #[derive(Subcommand, Debug, Delegate)]
-#[delegate(DRunnable)]
+#[delegate(Runnable)]
 enum DCommand {
     /// Creates a timestamped backup of a file or directory
     Backup(BackupArgs),

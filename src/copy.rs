@@ -3,9 +3,9 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::{self, Read};
 use tracing::trace;
 
-use crate::{CopyArgs, DRunnable};
+use crate::{CopyArgs, Runnable};
 
-impl DRunnable for CopyArgs {
+impl Runnable for CopyArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {self:?}");
 

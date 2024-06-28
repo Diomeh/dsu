@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use regex::Regex;
 use tracing::trace;
 
-use crate::{ClnArgs, DRunnable};
+use crate::{ClnArgs, Runnable};
 
-impl DRunnable for ClnArgs {
+impl Runnable for ClnArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {self:?}");
 

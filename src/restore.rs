@@ -3,9 +3,9 @@ use color_eyre::eyre::Result;
 use dialoguer::Confirm;
 use tracing::{debug, trace, warn};
 
-use crate::{modules::file_keeper::validate_paths, DRunnable, RestoreArgs};
+use crate::{modules::file_keeper::validate_paths, Runnable, RestoreArgs};
 
-impl DRunnable for RestoreArgs {
+impl Runnable for RestoreArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {:?}", self);
 

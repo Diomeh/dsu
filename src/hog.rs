@@ -1,9 +1,9 @@
 use color_eyre::eyre::{eyre, Result};
 use tracing::trace;
 
-use crate::{DRunnable, HogArgs};
+use crate::{Runnable, HogArgs};
 
-impl DRunnable for HogArgs {
+impl Runnable for HogArgs {
     fn run(&mut self) -> Result<()> {
         trace!("args: {self:?}");
 
