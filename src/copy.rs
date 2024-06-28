@@ -3,7 +3,7 @@ use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::{stdin, Read};
 use tracing::trace;
 
-use crate::{CopyArgs, Runnable};
+use crate::cli::{CopyArgs, Runnable};
 
 impl Runnable for CopyArgs {
     fn run(&mut self) -> Result<()> {

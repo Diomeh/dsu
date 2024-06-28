@@ -4,7 +4,10 @@ use regex::Regex;
 use std::fs::copy;
 use tracing::{debug, trace, warn};
 
-use crate::{file_keeper::validate_paths, RestoreArgs, Runnable};
+use crate::{
+    cli::{RestoreArgs, Runnable},
+    file_keeper::validate_paths,
+};
 
 impl Runnable for RestoreArgs {
     fn run(&mut self) -> Result<()> {

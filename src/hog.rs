@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use tracing::trace;
 
-use crate::{HogArgs, Runnable};
+use crate::cli::{HogArgs, Runnable};
 
 impl Runnable for HogArgs {
     fn run(&mut self) -> Result<()> {

@@ -3,7 +3,10 @@ use dialoguer::Confirm;
 use std::{fs, path::PathBuf};
 use tracing::{debug, trace, warn};
 
-use crate::{file_keeper::validate_paths, BackupArgs, Runnable};
+use crate::{
+    cli::{BackupArgs, Runnable},
+    file_keeper::validate_paths,
+};
 
 impl Runnable for BackupArgs {
     fn run(&mut self) -> Result<()> {

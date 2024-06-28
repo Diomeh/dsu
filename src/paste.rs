@@ -2,7 +2,7 @@ use color_eyre::eyre::{eyre, Result};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use tracing::trace;
 
-use crate::{PasteArgs, Runnable};
+use crate::cli::{PasteArgs, Runnable};
 
 impl Runnable for PasteArgs {
     fn run(&mut self) -> Result<()> {

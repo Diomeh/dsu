@@ -4,7 +4,7 @@ use regex::Regex;
 use std::{fs::rename, path::PathBuf};
 use tracing::trace;
 
-use crate::{ClnArgs, Runnable};
+use crate::cli::{ClnArgs, Runnable};
 
 impl Runnable for ClnArgs {
     fn run(&mut self) -> Result<()> {
