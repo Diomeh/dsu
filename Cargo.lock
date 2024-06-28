@@ -548,6 +548,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 
 [[package]]
+name = "dsu"
+version = "2.1.0"
+dependencies = [
+ "ambassador",
+ "chrono",
+ "clap",
+ "color-eyre",
+ "copypasta",
+ "dialoguer",
+ "flate2",
+ "log",
+ "regex",
+ "sevenz-rust",
+ "tar",
+ "tempfile",
+ "tracing",
+ "unrar",
+ "zip",
+]
+
+[[package]]
 name = "either"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1177,27 +1198,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
-]
-
-[[package]]
-name = "shell-scripts"
-version = "2.1.0"
-dependencies = [
- "ambassador",
- "chrono",
- "clap",
- "color-eyre",
- "copypasta",
- "dialoguer",
- "flate2",
- "log",
- "regex",
- "sevenz-rust",
- "tar",
- "tempfile",
- "tracing",
- "unrar",
- "zip",
 ]
 
 [[package]]

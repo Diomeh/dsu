@@ -1,5 +1,5 @@
 [package]
-name = "shell-scripts"
+name = "dsu"
 version = "2.1.0"
 edition = "2021"
 
