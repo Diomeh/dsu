@@ -1,19 +1,16 @@
 mod backup;
 mod cln;
 mod copy;
+mod file_keeper;
 mod hog;
 mod paste;
 mod restore;
 mod xtract;
 
-mod modules {
-    pub(crate) mod file_keeper;
-}
-
 use ambassador::{delegatable_trait, Delegate};
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
-use std::path::PathBuf;
+use std::{path::PathBuf, process::exit};
 
 #[derive(Parser)]
 #[command(
@@ -149,6 +146,6 @@ fn main() {
     let result = cli.command.run();
     if let Err(e) = result {
         eprintln!("Error: {}", e);
-        std::process::exit(1);
+        exit(1);
     }
 }

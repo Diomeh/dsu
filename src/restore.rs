@@ -1,9 +1,10 @@
-use color_eyre::eyre;
-use color_eyre::eyre::Result;
+use color_eyre::{eyre::eyre, eyre::Result};
 use dialoguer::Confirm;
+use regex::Regex;
+use std::fs::copy;
 use tracing::{debug, trace, warn};
 
-use crate::{modules::file_keeper::validate_paths, Runnable, RestoreArgs};
+use crate::{file_keeper::validate_paths, RestoreArgs, Runnable};
 
 impl Runnable for RestoreArgs {
     fn run(&mut self) -> Result<()> {
@@ -30,15 +31,11 @@ impl RestoreArgs {
 
         // bak extension?
         if !filename.ends_with(".bak") {
-            return Err(eyre::eyre!(
-                "Source file is not a backup file: {:?}",
-                filename
-            ));
+            return Err(eyre!("Source file is not a backup file: {:?}", filename));
         }
 
         // Check if source matches backup pattern
-        let pattern =
-            regex::Regex::new(r"^(.*)\.(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.bak$").unwrap();
+        let pattern = Regex::new(r"^(.*)\.(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.bak$").unwrap();
         let target_filename = match pattern.captures(&filename) {
             None => &filename[..filename.len() - 4], // filename.ext.bak
             Some(captures) => captures.get(1).unwrap().as_str(), // filename.ext.timestamp.bak
@@ -68,12 +65,12 @@ impl RestoreArgs {
         }
 
         // Attempt to copy the source to the target
-        match std::fs::copy(source, &target_path) {
+        match copy(source, &target_path) {
             Ok(_) => {
                 println!("Restored: {:?} to {:?}", source, target_path);
                 Ok(())
             }
-            Err(err) => Err(eyre::eyre!("Failed to restore {:?}: {}", source, err)),
+            Err(err) => Err(eyre!("Failed to restore {:?}: {}", source, err)),
         }
     }
 }

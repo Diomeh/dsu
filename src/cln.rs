@@ -1,7 +1,7 @@
 use color_eyre::eyre::Result;
 use dialoguer::Confirm;
-use std::path::PathBuf;
 use regex::Regex;
+use std::{fs::rename, path::PathBuf};
 use tracing::trace;
 
 use crate::{ClnArgs, Runnable};
@@ -99,28 +99,32 @@ impl ClnArgs {
             }
         } else if self.force == "auto" {
             // prompt and warn about single _ names and empty names
-            
 
-            if (clean_filename.is_empty() || clean_filename == "_") && !Confirm::new()
-                .with_prompt(format!("File {:?}, would rename to {:?}. Do you wish to proceed?", filename, clean_filename))
-                .interact()
-                .unwrap()
+            if (clean_filename.is_empty() || clean_filename == "_")
+                && !Confirm::new()
+                    .with_prompt(format!(
+                        "File {:?}, would rename to {:?}. Do you wish to proceed?",
+                        filename, clean_filename
+                    ))
+                    .interact()
+                    .unwrap()
             {
                 return;
             }
 
             // prompt for confirmation if exists
-            if clean_path.exists() && !Confirm::new()
-                .with_prompt(format!("Overwrite existing file at {:?}?", clean_path))
-                .interact()
-                .unwrap()
+            if clean_path.exists()
+                && !Confirm::new()
+                    .with_prompt(format!("Overwrite existing file at {:?}?", clean_path))
+                    .interact()
+                    .unwrap()
             {
                 return;
             }
         }
 
         // rename the file
-        match std::fs::rename(path, &clean_path) {
+        match rename(path, &clean_path) {
             Ok(_) => {
                 println!("{:?} -> {:?}", path, clean_path);
             }

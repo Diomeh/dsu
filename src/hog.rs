@@ -1,7 +1,7 @@
 use color_eyre::eyre::{eyre, Result};
 use tracing::trace;
 
-use crate::{Runnable, HogArgs};
+use crate::{HogArgs, Runnable};
 
 impl Runnable for HogArgs {
     fn run(&mut self) -> Result<()> {
@@ -32,10 +32,25 @@ impl Runnable for HogArgs {
             size_b.cmp(size_a)
         });
 
-        println!("Total size: {}", if self.human_readable { self.human_size(total_size) } else { total_size.to_string() });
+        println!(
+            "Total size: {}",
+            if self.human_readable {
+                self.human_size(total_size)
+            } else {
+                total_size.to_string()
+            }
+        );
         let mut i: usize = 0;
         for (path, hsize, size) in items {
-            println!("{}: {}", path, if self.human_readable { hsize } else { size.to_string() });
+            println!(
+                "{}: {}",
+                path,
+                if self.human_readable {
+                    hsize
+                } else {
+                    size.to_string()
+                }
+            );
 
             if i == self.limit {
                 break;

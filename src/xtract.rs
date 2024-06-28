@@ -1,8 +1,8 @@
 use color_eyre::eyre::{eyre, Result};
 use flate2::read::GzDecoder;
 use std::{
-    fs::{self, File},
-    io::{BufReader, BufWriter},
+    fs::{create_dir_all, read_dir, set_permissions, File, Permissions},
+    io::{copy, BufReader, BufWriter},
     path::PathBuf,
 };
 use tempfile::tempdir;
@@ -36,7 +36,7 @@ impl XtractArgs {
 
         // attempt to create the destination directory if needed
         if !destination.exists() {
-            fs::create_dir_all(&destination)?;
+            create_dir_all(&destination)?;
         }
 
         Ok(destination)
@@ -115,7 +115,7 @@ impl XtractArgs {
 
             if file.name().ends_with('/') {
                 println!("File {} extracted to {:?}", i, outpath.display());
-                fs::create_dir_all(&outpath)?;
+                create_dir_all(&outpath)?;
             } else {
                 println!(
                     "File {} extracted to {:?} ({} bytes)",
@@ -125,11 +125,11 @@ impl XtractArgs {
                 );
                 if let Some(p) = outpath.parent() {
                     if !p.exists() {
-                        fs::create_dir_all(p)?;
+                        create_dir_all(p)?;
                     }
                 }
                 let mut outfile = File::create(&outpath)?;
-                std::io::copy(&mut file, &mut outfile)?;
+                copy(&mut file, &mut outfile)?;
             }
 
             // set unix permissions
@@ -137,7 +137,7 @@ impl XtractArgs {
             {
                 use std::os::unix::fs::PermissionsExt;
                 if let Some(mode) = file.unix_mode() {
-                    fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))?;
+                    set_permissions(&outpath, Permissions::from_mode(mode))?;
                 }
             }
         }
@@ -161,11 +161,11 @@ impl XtractArgs {
 
             archive = if entry.is_file() {
                 if let Some(parent) = entry_path.parent() {
-                    fs::create_dir_all(parent)?;
+                    create_dir_all(parent)?;
                 }
                 header.extract_to(&entry_path)?
             } else {
-                fs::create_dir_all(&entry_path)?;
+                create_dir_all(&entry_path)?;
                 header.skip()?
             }
         }
@@ -190,7 +190,7 @@ impl XtractArgs {
 
         // Find the extracted .tar file in the temporary directory
         let mut tar_path = None;
-        for entry in fs::read_dir(&tpmdir)? {
+        for entry in read_dir(&tpmdir)? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().and_then(|ext| ext.to_str()) == Some("tar") {
@@ -213,10 +213,10 @@ impl XtractArgs {
         let destination = self.get_destination()?;
         let archive = BufReader::new(File::open(&self.archive)?);
 
-        let mut decoder = flate2::read::GzDecoder::new(archive);
+        let mut decoder = GzDecoder::new(archive);
         let mut buf_writer = BufWriter::new(File::create(destination)?);
 
-        std::io::copy(&mut decoder, &mut buf_writer)?;
+        copy(&mut decoder, &mut buf_writer)?;
         Ok(())
     }
 

@@ -1,11 +1,9 @@
-use color_eyre::eyre;
-use color_eyre::eyre::Result;
+use color_eyre::{eyre, eyre::Result};
 use dialoguer::Confirm;
-use std::fs;
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 use tracing::{debug, trace, warn};
 
-use crate::{modules::file_keeper::validate_paths, BackupArgs, Runnable};
+use crate::{file_keeper::validate_paths, BackupArgs, Runnable};
 
 impl Runnable for BackupArgs {
     fn run(&mut self) -> Result<()> {
