@@ -3,22 +3,25 @@ mod cln;
 mod copy;
 mod hog;
 mod paste;
-mod xtract;
 mod restore;
+mod xtract;
 
 mod modules {
     pub(crate) mod file_keeper;
 }
 
-use std::path::PathBuf;
 use ambassador::{delegatable_trait, Delegate};
 use clap::{Args, Parser, Subcommand};
 use color_eyre::eyre::Result;
+use std::path::PathBuf;
 
 #[derive(Parser)]
-#[clap(name = "Diomeh's script utilities (dsu)", author = "David Urbina")]
-#[clap(about = "Set of unix utilities bundled into a single CLI tool")]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    author,
+    about,
+    long_about = None
+)]
 struct Cli {
     /// Show debug logs
     /// TODO: Implement
@@ -103,8 +106,7 @@ pub struct ClnArgs {
 }
 
 #[derive(Args, Debug)]
-pub struct CopyArgs {
-}
+pub struct CopyArgs {}
 
 #[derive(Args, Debug)]
 pub struct HogArgs {
@@ -122,8 +124,7 @@ pub struct HogArgs {
 }
 
 #[derive(Args, Debug)]
-pub struct PasteArgs {
-}
+pub struct PasteArgs {}
 
 #[derive(Args, Debug)]
 pub struct XtractArgs {

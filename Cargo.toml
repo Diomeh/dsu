@@ -2,6 +2,8 @@
 name = "dsu"
 version = "2.1.0"
 edition = "2021"
+authors = ["David Urbina <davidurbina.dev@gmail.com>"]
+description = "Set of utilities bundled into a single CLI tool"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
