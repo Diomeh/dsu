@@ -25,7 +25,7 @@ struct Cli {
     pub verbose: bool,
 
     #[command(subcommand)]
-    pub command: DCommand,
+    pub command: Utilities,
 }
 
 #[delegatable_trait]
@@ -35,7 +35,7 @@ pub trait Runnable {
 
 #[derive(Subcommand, Debug, Delegate)]
 #[delegate(Runnable)]
-enum DCommand {
+enum Utilities {
     /// Creates a timestamped backup of a file or directory
     Backup(BackupArgs),
     /// Restores a file or directory from a timestamped backup
