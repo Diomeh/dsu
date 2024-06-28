@@ -21,8 +21,9 @@ use color_eyre::eyre::Result;
 #[command(version, about, long_about = None)]
 struct Cli {
     /// Show debug logs
-    #[arg(short, long, global = true)]
-    pub verbose: bool,
+    /// TODO: Implement
+    // #[arg(short, long, global = true)]
+    // pub verbose: bool,
 
     #[command(subcommand)]
     pub command: Utilities,
