@@ -20,7 +20,7 @@ make_tarball() {
     local dist_dir="$root_dir/dist"
     local bin_dir="$dist_dir/bin"
     local version="$(cat "$root_dir/VERSION")"
-    local tarball_name="shell-scripts-$version.tar.gz"
+    local tarball_name="dsu-$version.tar.gz"
 
     # Check if source directory exists
     if [ ! -d "$src_dir" ]; then

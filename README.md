@@ -16,13 +16,13 @@ Two distribution method are available, either:
 
 ### Standalone bash scripts
 
-Please refer to the [wiki](https://github.com/Diomeh/shell-scripts/wiki/Standalone-bash-scripts)
+Please refer to the [wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts)
 for information on building and running the standalone bash scripts;
-Alternatively you can find a pre-built tarfile in the [releases page](https://github.com/Diomeh/shell-scripts/releases/latest).
+Alternatively you can find a pre-built tarfile in the [releases page](https://github.com/Diomeh/dsu/releases/latest).
 
 ### Rust CLI tool
 
-A unix binary named as `dsu-X-Y-Z` can be found in the [releases page](https://github.com/Diomeh/shell-scripts/releases/latest)
+A unix binary named as `dsu-X-Y-Z` can be found in the [releases page](https://github.com/Diomeh/dsu/releases/latest)
 where `X-Y-Z` is the version number. Alternatively you can build it on your own.
 
 ## Usage
@@ -42,7 +42,7 @@ Each utility has its own set of options and arguments that you can see running t
 ./dsu-X-Y-Z <utility> --help
 ```
 
-For a breakdown of all the utilities, their options and what do they do please refer to the [wiki](https://github.com/Diomeh/shell-scripts/wiki)
+For a breakdown of all the utilities, their options and what do they do please refer to the [wiki](https://github.com/Diomeh/dsu/wiki)
 
 ### Installation
 
@@ -172,7 +172,7 @@ all options and arguments for both the tool itself and all the utilities.
 ### Testing
 
 As of now, testing has only been implemented for standalone bash scripts.
-Refer to the [bash scripts wiki](https://github.com/Diomeh/shell-scripts/wiki/Standalone-bash-scripts) 
+Refer to the [bash scripts wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts) 
 for more information on how to run the tests.
 
 ### Deployment
