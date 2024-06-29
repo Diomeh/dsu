@@ -2,14 +2,11 @@ use color_eyre::eyre::Result;
 use dialoguer::Confirm;
 use regex::Regex;
 use std::{fs::rename, path::PathBuf};
-use tracing::trace;
 
 use crate::cli::{ClnArgs, Runnable};
 
 impl Runnable for ClnArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {self:?}");
-
         // use the current directory if no paths are provided
         if self.paths.is_empty() {
             self.paths.push(PathBuf::from("."));
@@ -129,7 +126,7 @@ impl ClnArgs {
                 println!("{:?} -> {:?}", path, clean_path);
             }
             Err(err) => {
-                eprintln!("Failed to rename {:?} to {:?}: {}", path, clean_path, err);
+                eprintln!("ERROR: Failed to rename {:?} to {:?}: {}", path, clean_path, err);
             }
         }
     }

@@ -1,14 +1,11 @@
-use color_eyre::eyre::{eyre, Result};
-use tracing::trace;
+use color_eyre::eyre::{bail, Result};
 
 use crate::cli::{HogArgs, Runnable};
 
 impl Runnable for HogArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {self:?}");
-
         if !self.dir.is_dir() {
-            return Err(eyre!("Not a directory: {:?}", self.dir));
+            bail!("Not a directory: {:?}", self.dir);
         }
 
         let mut total_size: usize = 0;

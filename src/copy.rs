@@ -1,17 +1,14 @@
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use copypasta::{ClipboardContext, ClipboardProvider};
 use std::io::{stdin, Read};
-use tracing::trace;
 
 use crate::cli::{CopyArgs, Runnable};
 
 impl Runnable for CopyArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {self:?}");
-
         let mut input = String::new();
         if let Err(err) = stdin().read_to_string(&mut input) {
-            return Err(eyre!("Failed to read from stdin: {}", err));
+            bail!("Failed to read from stdin: {}", err);
         }
 
         ClipboardContext::new()

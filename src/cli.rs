@@ -12,10 +12,9 @@ use std::path::PathBuf;
 )]
 /// Main CLI
 pub struct Cli {
-    // Show debug logs
-    // TODO: Implement
-    // #[arg(short, long, global = true)]
-    // pub verbose: bool,
+    /// Show debug logs
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
 
     /// Utility to be executed
     #[command(subcommand)]
@@ -24,6 +23,11 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&mut self) -> Result<()> {
+        if self.verbose {
+            // TODO: Implement verbose mode
+            eprintln!("WARNING: Verbose mode support is not implemented yet");
+        }
+
         // Runnable::run cannot be public so cli.command.run() is not possible from main.rs
         self.command.run()
     }

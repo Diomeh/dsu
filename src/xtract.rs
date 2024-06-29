@@ -1,4 +1,4 @@
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result};
 use flate2::read::GzDecoder;
 use std::{
     fs::{create_dir_all, read_dir, set_permissions, File, Permissions},
@@ -6,17 +6,14 @@ use std::{
     path::PathBuf,
 };
 use tempfile::tempdir;
-use tracing::trace;
 
 use crate::cli::{Runnable, XtractArgs};
 
 impl Runnable for XtractArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {self:?}");
-
         // implies exists() == true
         if !self.archive.is_file() {
-            return Err(eyre!("Archive does not exist: {:?}", self.archive));
+            bail!("Archive does not exist: {:?}", self.archive);
         }
 
         self.process()
@@ -31,7 +28,7 @@ impl XtractArgs {
         // only allow directories as destination
         let destination = match self.destination.extension() {
             None => self.destination.join(filename.to_string()),
-            Some(ext) => return Err(eyre!("Destination is not a directory: {:?}", ext)),
+            Some(ext) => bail!("Destination is not a directory: {:?}", ext),
         };
 
         // attempt to create the destination directory if needed
@@ -72,12 +69,12 @@ impl XtractArgs {
 
     fn unsupported(&self, extension: &str, planned: bool) -> Result<()> {
         if planned {
-            Err(eyre!(
+            bail!(
                 "Support for {} files is planned but not yet implemented",
                 extension
-            ))
+            )
         } else {
-            Err(eyre!("Unsupported file extension: {}", extension))
+            bail!("Unsupported file extension: {}", extension)
         }
     }
 

@@ -1,8 +1,7 @@
-use color_eyre::{eyre::eyre, eyre::Result};
+use color_eyre::{eyre::bail, eyre::Result};
 use dialoguer::Confirm;
 use regex::Regex;
 use std::fs::copy;
-use tracing::{debug, trace, warn};
 
 use crate::{
     cli::{RestoreArgs, Runnable},
@@ -11,11 +10,8 @@ use crate::{
 
 impl Runnable for RestoreArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {:?}", self);
-
         if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
-            warn!("Validation failed: {}", e);
-            return Err(e);
+            bail!("Restore validation failed: {}", e);
         }
 
         self.restore()
@@ -24,8 +20,6 @@ impl Runnable for RestoreArgs {
 
 impl RestoreArgs {
     fn restore(&self) -> Result<()> {
-        debug!("Restoring");
-
         let source = &self.source;
         let target = self.target.as_ref().unwrap();
 
@@ -34,7 +28,7 @@ impl RestoreArgs {
 
         // bak extension?
         if !filename.ends_with(".bak") {
-            return Err(eyre!("Source file is not a backup file: {:?}", filename));
+            bail!("Source file is not a backup file: {:?}", filename);
         }
 
         // Check if source matches backup pattern
@@ -49,8 +43,6 @@ impl RestoreArgs {
         } else {
             target.with_file_name(target_filename)
         };
-
-        debug!("Copying {:?} to {:?}", source, target_path);
 
         // Check for dry run
         if self.dry {
@@ -73,7 +65,7 @@ impl RestoreArgs {
                 println!("Restored: {:?} to {:?}", source, target_path);
                 Ok(())
             }
-            Err(err) => Err(eyre!("Failed to restore {:?}: {}", source, err)),
+            Err(err) => bail!("Failed to restore {:?}: {}", source, err),
         }
     }
 }

@@ -1,7 +1,6 @@
-use color_eyre::{eyre, eyre::Result};
-use dialoguer::Confirm;
 use std::{fs, path::PathBuf};
-use tracing::{debug, trace, warn};
+use color_eyre::{eyre::bail, eyre::Result};
+use dialoguer::Confirm;
 
 use crate::{
     cli::{BackupArgs, Runnable},
@@ -10,11 +9,8 @@ use crate::{
 
 impl Runnable for BackupArgs {
     fn run(&mut self) -> Result<()> {
-        trace!("args: {self:?}");
-
         if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
-            warn!("Validation failed: {}", e);
-            return Err(e);
+            bail!("Backup validation failed: {}", e);
         }
 
         self.backup()
@@ -23,8 +19,6 @@ impl Runnable for BackupArgs {
 
 impl BackupArgs {
     fn backup(&self) -> Result<()> {
-        debug!("Backing up");
-
         let source = &self.source;
         let target = self.target.as_ref().unwrap();
 
@@ -53,8 +47,6 @@ impl BackupArgs {
             backup_path = target.with_file_name(format!("{}.bak", target_filename));
         }
 
-        debug!("Copying {:?} to {:?}", source, backup_path);
-
         // Check for dry run
         if self.dry {
             println!("Would back up {:?} to {:?}", source, backup_path);
@@ -77,7 +69,7 @@ impl BackupArgs {
                 println!("Backed up: {:?} to {:?}", source, backup_path);
                 Ok(())
             }
-            Err(_) => Err(eyre::eyre!("Failed to back up {:?}", source)),
+            Err(_) => bail!("Failed to back up {:?}", source),
         }
     }
 }

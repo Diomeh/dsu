@@ -1,10 +1,10 @@
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::Result;
 use std::{
     fs::{create_dir_all, metadata},
     os::unix::fs::PermissionsExt,
     path::PathBuf,
 };
-use tracing::debug;
+use color_eyre::eyre::bail;
 
 pub fn is_readable(path: &PathBuf) -> bool {
     match metadata(path) {
@@ -25,10 +25,8 @@ pub fn is_readable(path: &PathBuf) -> bool {
 }
 
 pub fn validate_paths(source: &PathBuf, target: &mut Option<PathBuf>, dry: bool) -> Result<()> {
-    debug!("Validating paths");
-
     if !is_readable(source) {
-        return Err(eyre!("Source path is not readable"));
+        bail!("Source path is not readable");
     }
 
     let real_target = match target {
@@ -47,11 +45,11 @@ pub fn validate_paths(source: &PathBuf, target: &mut Option<PathBuf>, dry: bool)
                                 println!("Created directory: {:?}", path);
                             }
                             Err(err) => {
-                                return Err(eyre!(
+                                bail!(
                                     "Failed to create directory {:?}: {}",
                                     path,
                                     err
-                                ));
+                                );
                             }
                         }
                     }
@@ -63,12 +61,12 @@ pub fn validate_paths(source: &PathBuf, target: &mut Option<PathBuf>, dry: bool)
     };
 
     if !dry && !is_readable(&real_target) {
-        return Err(eyre!("Target path is not readable: {:?}", real_target));
+        bail!("Target path is not readable: {:?}", real_target);
     }
 
     if source.to_path_buf() == real_target {
         // TODO: see about supporting this
-        return Err(eyre!("Source and target paths are the same"));
+        bail!("Source and target paths are the same");
     }
 
     // Update target with the resolved path
