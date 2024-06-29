@@ -6,17 +6,17 @@ set -euo pipefail
 
 usage() {
     cat <<EOF
-Usage: $(basename "$0") 
-Creates a tarball of the scripts in the src directory and save it to the dist directory.
+Usage: $(basename "$0")
+Creates a tarball of the scripts in the sh directory and save it to the dist directory.
 
 Example:
-    $(basename "$0") - Will create a tarball of the scripts in the src directory.
+    $(basename "$0") - Will create a tarball of the scripts in the sh directory.
 EOF
 }
 
 make_tarball() {
     local root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local src_dir="$root_dir/src"
+    local src_dir="$root_dir/sh"
     local dist_dir="$root_dir/dist"
     local bin_dir="$dist_dir/bin"
     local version="$(cat "$root_dir/VERSION")"
@@ -35,7 +35,7 @@ make_tarball() {
     # Copy the scripts to the dist directory
     for file in "$src_dir"/*; do
         cp "$file" "$bin_dir"
-        
+
         local filepath="$bin_dir/$(basename "$file")"
         chmod +x "$filepath"
 

@@ -4,7 +4,7 @@
 
 # Path vars
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC_DIR="$ROOT_DIR/src"
+SRC_DIR="$ROOT_DIR/src/sh"
 TEST_DIR="$ROOT_DIR/tests"
 TMP_DIR="$ROOT_DIR/tmp"
 

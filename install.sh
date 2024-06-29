@@ -7,7 +7,7 @@ set -euo pipefail
 usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
-Install all the scripts in ./src to the specified directory.
+Install all the scripts in ./sh to the specified directory.
 
 Options:
   -p, --path    Specify the installation path (default: /usr/local/bin)
@@ -47,7 +47,7 @@ done
 
 # Path to the custom scripts directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$SCRIPT_DIR/src"
+SRC_DIR="$SCRIPT_DIR/sh"
 INSTALL_FILE=""$SCRIPT_DIR/.install""
 
 # Make sure the install directory exists
@@ -58,7 +58,7 @@ echo "$INSTALL_DIR" > "$INSTALL_FILE"
 
 echo "Installing scripts from $SRC_DIR to $INSTALL_DIR"
 
-# Install each script in ./src, removing the .sh extension
+# Install each script in ./sh, removing the .sh extension
 for script in "$SRC_DIR"/*; do
     [ -f "$script" ] || continue # Skip if not a file
 

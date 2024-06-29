@@ -1,0 +1,23 @@
+[package]
+name = "dsu"
+version = "2.1.22"
+edition = "2021"
+authors = ["David Urbina <davidurbina.dev@gmail.com>"]
+description = "Set of utilities bundled into a single CLI tool"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ambassador = "0.4.0"
+clap = { version = "4.5.7", features = ["derive"] }
+color-eyre = "0.6.3"
+chrono = "0.4.38"
+dialoguer = "0.11.0"
+regex = "1.10.5"
+copypasta = "0.10.1"
+tar = "0.4.41"
+zip = "2.1.3"
+unrar = "0.5.3"
+sevenz-rust = "0.6.0"
+tempfile = "3.10.1"
+flate2 = "1.0.30"
