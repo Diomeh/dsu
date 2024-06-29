@@ -7,7 +7,7 @@ set -euo pipefail
 usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
-Uninstall scripts listed in the specified .install file or search for src/* in the install directory.
+Uninstall scripts listed in the specified .install file or search for sh/* in the install directory.
 
 Options:
   -p, --path    Specify the path to the .install file (default: ./<script directory>/.install)
@@ -27,9 +27,9 @@ check_root() {
 
 parse_arguments() {
     local install_file="$1/.install"
-    local src_dir="$1/src/sh"
+    local src_dir="$1/sh"
     local install_dir="/usr/local/bin"
-    
+
     while [[ "$#" -gt 1 ]]; do
         case "$2" in
             -p|--path)
