@@ -120,16 +120,21 @@ process_archive() {
       exit 1
     }
 
+    echo "[INFO] Extracting $archive to $target_dir..."
+
     if [[ -z "${target_dir_flag:-}" ]]; then
-      # Assume target directory is passed with no flag
-      "$dependency" "$extract_flag" "$archive" "$temp_dir"
+      if [[ "$dependency" == "unzip" ]]; then
+        "$dependency" "$archive" "$extract_flag" "$temp_dir" >/dev/null
+      else
+        "$dependency" "$extract_flag" "$archive" "$temp_dir" >/dev/null
+      fi
     else
       if [[ "$dependency" == "7z" ]]; then
         # 7z requires the output flag to be prepended to the target directory
         # eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir"
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir" >/dev/null
       else
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir"
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir" >/dev/null
       fi
     fi
 
@@ -150,6 +155,8 @@ process_archive() {
 
     # Remove the temporary directory
     rmdir "$temp_dir"
+
+    echo "[INFO] Extraction complete: $target_dir/$(basename "$archive" ."$archive_extension")"
     ;;
   esac
 }
