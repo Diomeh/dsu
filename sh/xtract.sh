@@ -6,25 +6,51 @@ set -euo pipefail
 
 usage() {
   cat <<EOF
-Usage: $0 [options] <archive> [output directory]
+Usage: $(basename "$0") [options] <archive> [target]
 Extracts the contents of a compressed archive to a directory.
 
 Options:
   -l, --list          List the contents of the archive.
   -h, --help          Show this help message and exit.
 
-If the output directory is not specified, the archive is extracted to the current directory or to a directory named after the compressed archive if contents are not immediately inside a folder.
+Arguments:
+  <archive>           The path to the compressed archive file.
+  [target]            Optional. The directory where the contents will be extracted. Defaults to the current directory or a directory named after the archive file if contents are not immediately inside a folder.
 
-Example:
-  $(basename "$0") file.tar.gz                   - Extracts the contents of file.tar.gz to the current directory.
-  $(basename "$0") file.tar.gz ~/Documents       - Extracts the contents of file.tar.gz to ~/Documents.
-  $(basename "$0") -l file.tar.gz                - Lists the contents of file.tar.gz.
+Behavior:
+- If the target directory is not specified, the archive is extracted to the current directory.
+- If the archive contents are not inside a folder, a directory named after the archive will be created for extraction.
 
-Supported archive types:
+Examples:
+  Extract the contents of file.tar.gz to the current directory:
+    $(basename "$0") file.tar.gz
+
+  Extract the contents of file.tar.gz to ~/Documents:
+    $(basename "$0") file.tar.gz ~/Documents
+
+  List the contents of file.tar.gz:
+    $(basename "$0") -l file.tar.gz
+
+Supported archive types (Archive types not listed here are not supported):
   - tarball: .tar, .tar.gz, .tgz, .tar.bz2, .tar.xz, .tar.7z
   - .7z
   - .zip
   - .rar
+
+Pending supported archive types:
+  - .gz
+  - .bz2
+  - .xz
+
+Dependencies:
+  - tar: Required for tarball archives.
+  - 7z: Required for 7z archives.
+  - unzip: Required for zip archives.
+  - unrar: Required for rar archives.
+
+Notes:
+- Ensure you have the necessary dependencies installed to handle the archive types (e.g., tar, unzip, 7z, unrar).
+- Extraction may require sufficient disk space and write permissions in the target directory.
 EOF
 }
 

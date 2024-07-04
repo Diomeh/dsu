@@ -7,29 +7,54 @@ set -euo pipefail
 # Usage function
 usage() {
   cat <<EOF
-Usage: $(basename "$0") <mode> <path/to/file/or/directory> [backup directory]
+Usage: $(basename "$0") <mode> <source> [target]
 
 Backup and restore files, directories or symlinks.
+
+Arguments:
+  <mode>           The operation to perform: backup or restore.
+  <source>         The path to the file, directory, or symlink to back up or restore.
+  [target]         Optional. The directory where backups are stored or from where to restore. Defaults to the current directory.
 
 Mode:
   -b, --backup     Create a timestamped backup of the file or directory
   -r, --restore    Restore the file or directory from a backup
   -h, --help       Display this help message
 
-If the backup directory is not specified, the backup file will be generated in the current directory.
-If the backup directory does not exist, it will be created (assuming correct permissions are set).
+Behavior:
+  - Backup:
+    Creates a backup file with a timestamp in the name to avoid overwriting previous backups.
+    If the backup directory is not specified, the backup file will be created in the current directory.
+    If the backup directory does not exist, it will be created (assuming the correct permissions are set).
 
-When performing a restore operation, the optional argument <backup directory> will be treated as the target directory
-where the backup file will be restored. If the target file or directory already exists, the user will be prompted for confirmation.
+  - Restore:
+    Restores the file or directory from a specified backup file.
+    If the target file or directory already exists, the user will be prompted for confirmation.
+    The optional argument [target] will be treated as the target directory where the backup file will be restored.
 
-The backup file or directory will be named as follows:
-  <backup directory>/<filename>.<timestamp>.backup
+Naming Convention:
+  Backup files will be named as follows:
+    <target>/<filename>.<timestamp>.bak
+  Where timestamp is in the format: YYYY-MM-DD_HH-MM-SS
+  Example:
+    /home/user/backups/hosts.2024-07-04_12-00-00.bak
 
 Examples:
-  $(basename "$0") -b /etc/hosts
-  $(basename "$0") -b /etc/hosts /home/user/backups
-  $(basename "$0") -r /home/user/backups/hosts.2018-01-01_00-00-00.backup
-  $(basename "$0") -r ./file.txt.2024-01-01_00-00-00.backup ~/Documents
+  Create a backup of /etc/hosts in the current directory:
+    $(basename "$0") -b /etc/hosts
+
+  Create a backup of /etc/hosts in /home/user/backups:
+    $(basename "$0") -b /etc/hosts /home/user/backups
+
+  Restore the backup file to the current working directory:
+    $(basename "$0") -r /home/user/backups/hosts.2024-07-04_12-00-00.bak
+
+  Restore the backup file to a specified directory (e.g., ~/Documents):
+    $(basename "$0") -r /home/user/backups/hosts.2024-07-04_12-00-00.bak ~/Documents
+
+Note:
+- Ensure you have the necessary permissions to read/write files and directories involved in the operations.
+- For large directories, the backup and restore operations might take some time as all the file tree needs to be copied.
 EOF
 }
 

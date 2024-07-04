@@ -7,7 +7,7 @@ IFS=$'\n\t'
 
 print_usage() {
   cat <<EOF
-Usage: $(basename "$0") [directories]
+Usage: $(basename "$0") [directories...]
 
 Replace all special characters in filenames within the specified directories.
 If no directories are provided, the script will operate in the current directory.
@@ -15,10 +15,23 @@ If no directories are provided, the script will operate in the current directory
 Options:
   -h, --help    Show this help message and exit.
 
-Example:
-  $(basename "$0")
-  $(basename "$0") /path/to/directory
-  $(basename "$0") /path/to/directory1 /path/to/directory2
+Examples:
+  Replace special characters in filenames in the current directory.
+    $(basename "$0")
+
+  Replace special characters in filenames within ~/Documents.
+    $(basename "$0") ~/Documents
+
+  Replace special characters in filenames within ./foo and /bar.
+    $(basename "$0") ./foo /bar
+
+Special Character Replacement:
+- The script replaces characters that are not alphanumeric or hyphens with underscores.
+- Spaces, punctuation, and other special characters will be replaced.
+
+Note:
+- Ensure you have the necessary permissions to read/write files in the specified directories.
+- Filenames that only differ by special characters might result in name conflicts after replacement.
 EOF
 }
 
