@@ -61,25 +61,25 @@ process_archive() {
   local dependency list_flag extract_flag target_dir_flag
 
   if [[ -z "${archive_types[${archive##*.}]:-}" ]]; then
-    echo "Error: Unsupported archive type: $archive" >&2
+    echo "[ERROR] Unsupported archive type: $archive" >&2
     exit 1
   fi
 
   read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 
   if ! command -v "$dependency" &>/dev/null; then
-    echo "Error: $dependency is needed but not found." >&2
+    echo "[ERROR] $dependency is needed but not found." >&2
     exit 1
   fi
 
   if [[ ! -f "$archive" ]]; then
-    echo "Error: $archive is not a valid archive" >&2
+    echo "[ERROR] Not a valid archive: $archive" >&2
     exit 1
   fi
 
   if [[ ! -d "$target_dir" ]]; then
     mkdir -p "$target_dir" || {
-      echo "Error: '$target_dir': Permission denied" >&2
+      echo "[ERROR] Permission denied: $target_dir" >&2
       exit 1
     }
   fi
@@ -90,7 +90,7 @@ process_archive() {
     # Create a temporary directory to extract the contents
     local temp_dir
     temp_dir=$(mktemp -d) || {
-      echo "Error: Could not create temporary directory" >&2
+      echo "[ERROR] Could not create temporary directory" >&2
       exit 1
     }
 
@@ -104,7 +104,7 @@ process_archive() {
     # Check exit status of the extraction command
     local exit_code=$?
     if [ "$exit_code" -ne 0 ]; then
-      echo "Error: Extraction failed with exit code $exit_code" >&2
+      echo "[ERROR] Extraction failed with exit code $exit_code" >&2
       exit 1
     fi
 
@@ -142,19 +142,13 @@ main() {
       break
       ;;
     -*)
-      echo "Error: Unknown option: $1" >&2
+      echo "[ERROR] Unknown option: $1" >&2
       usage
       exit 1
       ;;
     *) break ;;
     esac
   done
-
-  if [[ "$#" -lt 1 || "$#" -gt 2 ]]; then
-    echo "Error: Incorrect number of arguments" >&2
-    usage
-    exit 1
-  fi
 
   archive="$1"
   target_dir="${2:-$(pwd)}"

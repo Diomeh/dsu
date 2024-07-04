@@ -30,7 +30,7 @@ replace_special_chars() {
 
   # Check filepath permissions
   if [ ! -w "$filepath" ]; then
-    echo "Error: $filepath: Permission denied"
+    echo "[ERROR] $filepath: Permission denied" >&2
     return
   fi
 
@@ -42,7 +42,7 @@ replace_special_chars() {
 
   # If newname is empty, skip
   if [ -z "$newname" ]; then
-    echo "Error: $filename: new name is empty. Skipping..."
+    echo "[WARN] $filename: new name is empty. Skipping..." >&2
     return
   fi
 
@@ -53,14 +53,14 @@ replace_special_chars() {
     return
   fi
 
-  echo "Renaming: $filename -> $newname"
+  echo "[INFO] Renaming: $filename -> $newname"
 
   # Check if target file already exists
   if [ -e "$target" ]; then
     read -p "File already exists. Overwrite? [y/N] " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Skipping $filename"
+      echo "[INFO] Skipping $filename"
       return
     else
       rm -rf "$target" # Remove the existing file before renaming
