@@ -124,7 +124,13 @@ process_archive() {
       # Assume target directory is passed with no flag
       "$dependency" "$extract_flag" "$archive" "$temp_dir"
     else
-      "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir"
+      if [[ "$dependency" == "7z" ]]; then
+        # 7z requires the output flag to be prepended to the target directory
+        # eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir"
+      else
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir"
+      fi
     fi
 
     # Check exit status of the extraction command
