@@ -86,7 +86,7 @@ process_archive() {
   local archive_extension="${archive##*.}"
   local dependency list_flag extract_flag target_dir_flag
 
-  if [[ -z "${archive_types[${archive##*.}]:-}" ]]; then
+  if [[ -z ${archive_types[${archive##*.}]:-} ]]; then
     echo "[ERROR] Unsupported archive type: $archive" >&2
     exit 1
   fi
@@ -98,12 +98,12 @@ process_archive() {
     exit 1
   fi
 
-  if [[ ! -f "$archive" ]]; then
+  if [[ ! -f $archive ]]; then
     echo "[ERROR] Not a valid archive: $archive" >&2
     exit 1
   fi
 
-  if [[ ! -d "$target_dir" ]]; then
+  if [[ ! -d $target_dir ]]; then
     mkdir -p "$target_dir" || {
       echo "[ERROR] Permission denied: $target_dir" >&2
       exit 1
@@ -120,16 +120,21 @@ process_archive() {
       exit 1
     }
 
-    if [[ -z "${target_dir_flag:-}" ]]; then
-      # Assume target directory is passed with no flag
-      "$dependency" "$extract_flag" "$archive" "$temp_dir"
+    echo "[INFO] Extracting $archive to $target_dir..."
+
+    if [[ -z ${target_dir_flag:-} ]]; then
+      if [[ $dependency == "unzip" ]]; then
+        "$dependency" "$archive" "$extract_flag" "$temp_dir" >/dev/null
+      else
+        "$dependency" "$extract_flag" "$archive" "$temp_dir" >/dev/null
+      fi
     else
-      if [[ "$dependency" == "7z" ]]; then
+      if [[ $dependency == "7z" ]]; then
         # 7z requires the output flag to be prepended to the target directory
         # eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir"
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir" >/dev/null
       else
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir"
+        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir" >/dev/null
       fi
     fi
 
@@ -150,6 +155,8 @@ process_archive() {
 
     # Remove the temporary directory
     rmdir "$temp_dir"
+
+    echo "[INFO] Extraction complete: $target_dir/$(basename "$archive" ."$archive_extension")"
     ;;
   esac
 }
@@ -159,7 +166,7 @@ main() {
   local archive=""
   local target_dir=""
 
-  while [[ "$#" -gt 0 ]]; do
+  while [[ $# -gt 0 ]]; do
     case "$1" in
     -l | --list)
       action="list"

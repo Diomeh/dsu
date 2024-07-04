@@ -89,7 +89,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # If -h or --help flag is provided, print usage and exit
-if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+if [[ $1 == "-h" || $1 == "--help" ]]; then
   print_usage
   exit 0
 fi

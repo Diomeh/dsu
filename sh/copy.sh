@@ -26,19 +26,18 @@ EOF
 }
 
 parse_args() {
-  while [[ "$#" -gt 0 ]]; do
+  while [[ $# -gt 0 ]]; do
     case $1 in
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        echo "[ERROR] Unknown option: $1" >&2
-        usage
-        exit 1
-        ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "[ERROR] Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
     esac
-    shift
   done
 }
 
