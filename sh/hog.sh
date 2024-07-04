@@ -11,4 +11,4 @@ case $# in
   ;;
 esac
 
-du -s --one-file-system $dir/* $dir/.[A-Za-z0-9]* | sort -rn | head
+du -s --one-file-system "$dir/*" "$dir/.[A-Za-z0-9]*" | sort -rn | head
