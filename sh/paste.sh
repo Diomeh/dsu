@@ -55,7 +55,7 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
   fi
 
   # Paste clipboard contents to stdin
-#  wl-paste
+  wl-paste
 elif [ "$XDG_SESSION_TYPE" = "x11" ]; then
   # Check if xclip is installed
   if ! command -v xclip >/dev/null; then
@@ -64,7 +64,7 @@ elif [ "$XDG_SESSION_TYPE" = "x11" ]; then
   fi
 
   # Paste clipboard contents to stdin
-#  xclip -o -sel clip
+  xclip -o -sel clip
 else
   echo "[ERROR] Unknown session type: $XDG_SESSION_TYPE" >&2
   exit 1
