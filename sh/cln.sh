@@ -5,7 +5,10 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-VERSION="v2.1.28"
+VERSION="v2.1.29"
+
+# Dry run flag
+DRY="n"
 
 usage() {
   cat <<EOF
@@ -17,6 +20,7 @@ If no directories are provided, the script will operate in the current directory
 Options:
   -h, --help      Show this help message and exit.
   -v, --version   Display the version of this script and exit
+  -d, --dry       Dry run. Print the operations that would be performed without actually executing them.
 
 Examples:
   Replace special characters in filenames in the current directory.
@@ -45,19 +49,23 @@ version() {
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
-    -h | --help)
-      usage
-      exit 0
-      ;;
-    -v | --version)
-      version
-      exit 0
-      ;;
-    *)
-      echo "[ERROR] Unknown option: $1" >&2
-      usage
-      exit 1
-      ;;
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -v | --version)
+        version
+        exit 0
+        ;;
+      -d | --dry)
+        DRY="y"
+        shift
+        ;;
+      *)
+        echo "[ERROR] Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
     esac
   done
 }
@@ -93,10 +101,19 @@ replace_special_chars() {
     return
   fi
 
-  echo "[INFO] Renaming: $filename -> $newname"
+  if [ "$DRY" == "y" ]; then
+    echo "[DRY] Would rename: $filename -> $newname"
+  else
+    echo "[INFO] Renaming: $filename -> $newname"
+  fi
 
   # Check if target file already exists
   if [ -e "$target" ]; then
+    if [ "$DRY" == "y" ]; then
+      echo "[DRY] Would prompt for overwriting: $target"
+      return 0
+    fi
+
     read -p "File already exists. Overwrite? [y/N] " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
