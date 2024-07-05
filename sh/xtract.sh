@@ -7,10 +7,43 @@ set -euo pipefail
 VERSION="v2.1.27"
 
 # Log levels
-LOG_SILENT=0
+#LOG_SILENT=0
 LOG_QUIET=1
 LOG_NORMAL=2
 LOG_VERBOSE=3
+
+# Args and options
+SOURCE=""
+TARGET=""
+LIST="n"
+DRY="n"
+FORCE="ask"
+LOG=$LOG_NORMAL
+
+# archive_types associative array
+# This associative array maps archive extensions to the commands and flags needed
+# for listing and extracting the contents of the compressed archives.
+#
+# Key: archive extension (without leading dot)
+# Value: A string containing four space-separated components:
+#   1. Dependency command: The command required to handle the archive type.
+#   2. List flag: The flag used with the dependency command to list contents.
+#   3. Extract flag: The flag used with the dependency command to extract contents.
+#   4. Output flag (optional): The flag used to specify the output directory for extraction.
+declare -A archive_types=(
+  ["tar"]="tar -tf -xf -C"
+  ["tar.gz"]="tar -tzf -xzf -C"
+  ["tgz"]="tar -tzf -xzf -C"
+  ["tar.bz2"]="tar -tjf -xjf -C"
+  ["tar.xz"]="tar -tJf -xJf -C"
+  ["tar.7z"]="7z l x -o"
+  ["7z"]="7z l x -o"
+  ["zip"]="unzip -l -d"
+  ["rar"]="unrar l x"
+  # ["gz"]="gzip - -dc >"
+  # ["bz2"]="bzip2 - -dc >"
+  # ["xz"]="unxz -l -dc >"
+)
 
 usage() {
   cat <<EOF
@@ -26,12 +59,18 @@ Options:
   -l, --list          List the contents of the archive.
   -h, --help          Show this help message and exit.
   -v, --version       Show the version of this script and exit.
-  -l, --log <level>
-                  Log level. One of (2 by default):
-                    - 0: Silent mode. No output
-                    - 1: Quiet mode. Only errors
-                    - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                    - 3: Verbose mode. Detailed information about the operations being performed.
+  -d, --dry           Dry run. Print the operations that would be performed without actually executing them.
+  -f, --force <y/n/ask>
+                      Force mode. One of (ask by default):
+                        - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+                        - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+                        - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
+  -L, --log <level>
+                      Log level. One of (2 by default):
+                        - 0: Silent mode. No output
+                        - 1: Quiet mode. Only errors
+                        - 2: Normal mode. Errors warnings and information. This is the default behavior.
+                        - 3: Verbose mode. Detailed information about the operations being performed.
 
 Behavior:
 - If the target directory is not specified, the archive is extracted to the current directory.
@@ -70,31 +109,6 @@ Notes:
 EOF
 }
 
-# archive_types associative array
-# This associative array maps archive extensions to the commands and flags needed
-# for listing and extracting the contents of the compressed archives.
-#
-# Key: archive extension (without leading dot)
-# Value: A string containing four space-separated components:
-#   1. Dependency command: The command required to handle the archive type.
-#   2. List flag: The flag used with the dependency command to list contents.
-#   3. Extract flag: The flag used with the dependency command to extract contents.
-#   4. Output flag (optional): The flag used to specify the output directory for extraction.
-declare -A archive_types=(
-  ["tar"]="tar -tf -xf -C"
-  ["tar.gz"]="tar -tzf -xzf -C"
-  ["tgz"]="tar -tzf -xzf -C"
-  ["tar.bz2"]="tar -tjf -xjf -C"
-  ["tar.xz"]="tar -tJf -xJf -C"
-  ["tar.7z"]="7z l x -o"
-  ["7z"]="7z l x -o"
-  ["zip"]="unzip -l -d"
-  ["rar"]="unrar l x"
-  # ["gz"]="gzip - -dc >"
-  # ["bz2"]="bzip2 - -dc >"
-  # ["xz"]="unxz -l -dc >"
-)
-
 version() {
   echo "$(basename "$0") version $VERSION"
 }
@@ -129,17 +143,240 @@ log() {
   esac
 }
 
-process_archive() {
-  local action="$1"
-  local archive="$2"
-  local target_dir="$3"
-  local archive_extension="${archive##*.}"
-  local dependency list_flag extract_flag target_dir_flag
+arg_parse() {
+  # Expand combined short options (e.g., -qy to -q -y)
+  expanded_args=()
+  while [[ $# -gt 0 ]]; do
+    # If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
+    if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
+      expanded_args+=("$1")
+      shift
+      continue
+    fi
 
-  if [[ -z ${archive_types[${archive##*.}]:-} ]]; then
-    log $LOG_QUIET "[ERROR] Unsupported archive type: $archive" >&2
+    # Iterate over all combined short options
+    # and expand them into separate arguments
+    # eg. -qy becomes -q -y
+    for ((i = 1; i < ${#1}; i++)); do
+      expanded_args+=("-${1:$i:1}")
+    done
+
+    shift
+  done
+
+  # Reset positional parameters to expanded arguments
+  set -- "${expanded_args[@]}"
+
+  # Parse long arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -v | --version)
+        version
+        exit 0
+        ;;
+      -l | --list)
+        LIST="y"
+        shift
+        ;;
+      -d | --dry)
+        DRY="y"
+        shift
+        ;;
+      -f | --force)
+        FORCE="$2"
+
+        if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
+          log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+          exit 1
+        fi
+
+        shift 2
+        ;;
+      -L | --log)
+        LOG="$2"
+
+        if [[ ! $LOG =~ ^[0-3]$ ]]; then
+          log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+          exit 1
+        fi
+
+        shift 2
+        ;;
+      -*)
+        log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
+      *)
+        if [ -z "$SOURCE" ]; then
+          SOURCE="$1"
+        elif [ -z "$TARGET" ]; then
+          TARGET="$1"
+        else
+          log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
+          usage
+          exit 1
+        fi
+        shift
+        ;;
+    esac
+  done
+
+  # Default to current directory if backup directory not provided
+  TARGET="${TARGET:-$(pwd)}"
+
+  # Will only happen when on verbose mode
+  log $LOG_VERBOSE "[INFO] Running verbose log level"
+
+  if [ "$FORCE" == "y" ]; then
+    log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+  elif [ "$FORCE" == "n" ]; then
+    log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+  else
+    log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
+  fi
+
+  if [ $DRY == "y" ]; then
+    log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
+  fi
+}
+
+check_source() {
+  if [ -z "$SOURCE" ]; then
+    log $LOG_QUIET "[ERROR] No archive provided" >&2
+    exit 1
+  elif [ ! -r "$SOURCE" ]; then
+    log $LOG_QUIET "[ERROR] Permission denied: $SOURCE" >&2
+    exit 1
+  elif [[ ! -f "$SOURCE" || -z "${archive_types[${SOURCE##*.}]:-}" ]]; then
+    log $LOG_QUIET "[ERROR] Not a valid archive: $SOURCE" >&2
     exit 1
   fi
+}
+
+check_target() {
+  if [ ! -e "$TARGET" ]; then
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would create directory: $TARGET"
+      return
+    fi
+
+    if [[ $FORCE == "y" ]]; then
+      log $LOG_VERBOSE "[INFO] Creating directory: $TARGET"
+      mkdir -p "$TARGET" || {
+        log $LOG_QUIET "[ERROR] Could not create directory: $TARGET" >&2
+        exit 1
+      }
+    elif [[ $FORCE == "n" ]]; then
+      log $LOG_QUIET "[ERROR] Directory does not exist, exiting: $TARGET" >&2
+      exit 1
+    else
+      read -p "[WARN] Directory does not exist. Create? [y/N] " -n 1 -r
+      echo ""
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log $LOG_NORMAL "[INFO] Exiting..."
+        exit 0
+      else
+        log $LOG_VERBOSE "[INFO] Creating directory: $TARGET"
+        mkdir -p "$TARGET" || {
+          log $LOG_QUIET "[ERROR] Could not create directory: $TARGET" >&2
+          exit 1
+        }
+      fi
+    fi
+  elif [ ! -d "$TARGET" ]; then
+    log $LOG_QUIET "[ERROR] Not a directory: $TARGET" >&2
+    exit 1
+  elif [ ! -w "$TARGET" ]; then
+    log $LOG_QUIET "[ERROR] Permission denied: $TARGET" >&2
+    exit 1
+  fi
+}
+
+extract_archive() {
+  local dependency="$1"
+  local extract_flag="$2"
+  local target_dir_flag="$3"
+  local target_dir="$TARGET"
+
+  if [[ $DRY == "y" ]]; then
+    if [ "$LOG" == $LOG_VERBOSE ]; then
+      log $LOG_VERBOSE "[DRY] Would create temporary directory"
+      log $LOG_VERBOSE "[DRY] Would extract $SOURCE to temporary directory"
+      log $LOG_VERBOSE "[DRY] Would move contents from temporary directory to target directory: $target_dir"
+      log $LOG_VERBOSE "[DRY] Would remove temporary directory"
+    else
+      log $LOG_NORMAL "[DRY] Would extract $SOURCE to $target_dir..."
+    fi
+
+    return 0
+  fi
+
+  log $LOG_VERBOSE "[INFO] Creating temporary directory"
+
+  # Create a temporary directory to extract the contents
+  local temp_dir
+  temp_dir=$(mktemp -d) || {
+    log $LOG_QUIET "[ERROR] Could not create temporary directory" >&2
+    exit 1
+  }
+
+  log $LOG_NORMAL "[INFO] Extracting $SOURCE to $target_dir..."
+
+  if [[ -z ${target_dir_flag:-} ]]; then
+    if [[ $dependency == "unzip" ]]; then
+      "$dependency" "$SOURCE" "$extract_flag" "$temp_dir" >/dev/null
+    else
+      "$dependency" "$extract_flag" "$SOURCE" "$temp_dir" >/dev/null
+    fi
+  else
+    if [[ $dependency == "7z" ]]; then
+      # 7z requires the output flag to be prepended to the target directory
+      # eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
+      "$dependency" "$extract_flag" "$SOURCE" "$target_dir_flag""$temp_dir" >/dev/null
+    else
+      "$dependency" "$extract_flag" "$SOURCE" "$target_dir_flag" "$temp_dir" >/dev/null
+    fi
+  fi
+
+  # Check exit status of the extraction command
+  local exit_code=$?
+  if [ "$exit_code" -ne 0 ]; then
+    log $LOG_QUIET "[ERROR] Extraction failed with exit code $exit_code" >&2
+    exit 1
+  fi
+
+  log $LOG_VERBOSE "[INFO] Checking contents of the extracted directory: $temp_dir"
+
+  # Check if the contents are immediately inside a folder and move them accordingly
+  local target
+  target="$target_dir/$(basename "$SOURCE" ."$archive_extension")"
+
+  if [ "$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" -gt 1 ]; then
+    log $LOG_VERBOSE "[INFO] Using archive name as target directory: $target"
+    log $LOG_VERBOSE "[INFO] Moving contents to target directory"
+
+    mkdir -p "$target"
+    mv "$temp_dir"/* "$target"
+  else
+    log $LOG_VERBOSE "[INFO] Moving contents to target directory: $target_dir"
+    mv "$temp_dir"/* "$target_dir"
+  fi
+
+  # Remove the temporary directory
+  log $LOG_VERBOSE "[INFO] Removing temporary directory"
+  rmdir "$temp_dir"
+
+  log $LOG_NORMAL "[INFO] Extraction complete: $target"
+}
+
+run() {
+  local archive_extension="${SOURCE##*.}"
+  local dependency list_flag extract_flag target_dir_flag
 
   read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 
@@ -148,105 +385,34 @@ process_archive() {
     exit 1
   fi
 
-  if [[ ! -f $archive ]]; then
-    log $LOG_QUIET "[ERROR] Not a valid archive: $archive" >&2
-    exit 1
+  if [[ $DRY == "y" ]]; then
+    if [ $LIST == "Y" ]; then
+      log $LOG_NORMAL "[DRY] Would list contents of $SOURCE"
+    else
+      log $LOG_NORMAL "[DRY] Would extract contents of $SOURCE"
+    fi
+  else
+    if [ $LIST == "Y" ]; then
+      log $LOG_NORMAL "[INFO] Listing contents of $SOURCE"
+      "$dependency" "$list_flag" "$SOURCE"
+    else
+      log $LOG_NORMAL "[INFO] Initiating extraction process."
+      extract_archive "$dependency" "$extract_flag" "$target_dir_flag"
+    fi
   fi
 
-  if [[ ! -d $target_dir ]]; then
-    mkdir -p "$target_dir" || {
-      log $LOG_QUIET "[ERROR] Permission denied: $target_dir" >&2
-      exit 1
-    }
-  fi
-
-  case "$action" in
-  list) "$dependency" "$list_flag" "$archive" ;;
-  extract)
-    # Create a temporary directory to extract the contents
-    local temp_dir
-    temp_dir=$(mktemp -d) || {
-      log $LOG_QUIET "[ERROR] Could not create temporary directory" >&2
-      exit 1
-    }
-
-    log $LOG_NORMAL "[INFO] Extracting $archive to $target_dir..."
-
-    if [[ -z ${target_dir_flag:-} ]]; then
-      if [[ $dependency == "unzip" ]]; then
-        "$dependency" "$archive" "$extract_flag" "$temp_dir" >/dev/null
-      else
-        "$dependency" "$extract_flag" "$archive" "$temp_dir" >/dev/null
-      fi
-    else
-      if [[ $dependency == "7z" ]]; then
-        # 7z requires the output flag to be prepended to the target directory
-        # eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag""$temp_dir" >/dev/null
-      else
-        "$dependency" "$extract_flag" "$archive" "$target_dir_flag" "$temp_dir" >/dev/null
-      fi
-    fi
-
-    # Check exit status of the extraction command
-    local exit_code=$?
-    if [ "$exit_code" -ne 0 ]; then
-      log $LOG_QUIET "[ERROR] Extraction failed with exit code $exit_code" >&2
-      exit 1
-    fi
-
-    # Check if the contents are immediately inside a folder and move them accordingly
-    if [ "$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" -gt 1 ]; then
-      mkdir -p "$target_dir/$(basename "$archive" ."$archive_extension")"
-      mv "$temp_dir"/* "$target_dir/$(basename "$archive" ."$archive_extension")"
-    else
-      mv "$temp_dir"/* "$target_dir"
-    fi
-
-    # Remove the temporary directory
-    rmdir "$temp_dir"
-
-    log $LOG_NORMAL "[INFO] Extraction complete: $target_dir/$(basename "$archive" ."$archive_extension")"
-    ;;
-  esac
 }
 
 main() {
-  local action="extract"
-  local archive=""
-  local target_dir=""
+  arg_parse "$@"
 
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-    -l | --list)
-      action="list"
-      shift
-      ;;
-    -h | --help)
-      usage
-      exit 0
-      ;;
-    -v | --version)
-      version
-      exit 0
-      ;;
-    --)
-      shift
-      break
-      ;;
-    -*)
-      log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
-      usage
-      exit 1
-      ;;
-    *) break ;;
-    esac
-  done
+  log $LOG_VERBOSE "[INFO] Checking source directory"
+  check_source
 
-  archive="$1"
-  target_dir="${2:-$(pwd)}"
+  log $LOG_VERBOSE "[INFO] Checking target directory"
+  check_target
 
-  process_archive "$action" "$archive" "$target_dir"
+  run
 }
 
 main "$@"
