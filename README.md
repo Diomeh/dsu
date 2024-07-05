@@ -18,7 +18,7 @@ Two distribution method are available, either:
 
 Please refer to the [wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts)
 for information on building and running the standalone bash scripts;
-Alternatively you can find a pre-built tarfile in the [releases page](https://github.com/Diomeh/dsu/releases/latest).
+Alternatively you can find a pre-built tarball in the [releases page](https://github.com/Diomeh/dsu/releases/latest).
 
 ### Rust CLI tool
 
