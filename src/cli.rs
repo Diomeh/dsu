@@ -16,6 +16,10 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
+    /// Check for updates
+    #[arg(long, short = 'u')]
+    pub update: bool,
+
     /// Utility to be executed
     #[command(subcommand)]
     command: Utilities,
@@ -55,6 +59,8 @@ enum Utilities {
     Paste(PasteArgs),
     /// Archive extraction utility
     Xtract(XtractArgs),
+    /// Check for updates
+    Update(UpdateArgs),
 }
 
 #[derive(Args, Debug)]
@@ -144,3 +150,6 @@ pub struct XtractArgs {
     #[arg(long, short = 'l')]
     pub list: bool,
 }
+
+#[derive(Args, Debug)]
+pub struct UpdateArgs {}

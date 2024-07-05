@@ -7,6 +7,7 @@ mod hog;
 mod paste;
 mod restore;
 mod xtract;
+mod update;
 
 use clap::Parser;
 use color_eyre::Result;
