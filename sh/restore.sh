@@ -4,10 +4,10 @@
 
 set -euo pipefail
 
-VERSION="v2.1.26"
+VERSION="v2.1.27"
 
 # Log levels
-LOG_SILENT=0
+#LOG_SILENT=0
 LOG_QUIET=1
 LOG_NORMAL=2
 LOG_VERBOSE=3
@@ -192,9 +192,9 @@ arg_parse() {
   # Will only happen when on verbose mode
   log $LOG_VERBOSE "[INFO] Running verbose log level"
 
-  if [ $FORCE == "y" ]; then
+  if [ "$FORCE" == "y" ]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-  elif [ $FORCE == "n" ]; then
+  elif [ "$FORCE" == "n" ]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
   else
     log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
@@ -277,7 +277,7 @@ run() {
       log $LOG_NORMAL "[DRY] Would overwrite existing file: $target_path/$target_file"
     elif [ "$FORCE" == "y" ]; then
       log $LOG_NORMAL "[INFO] Overwriting existing file: $target_path/$target_file"
-      rm -rf "$target_path/$target_file"
+      rm -rf "${target_path:?}/$target_file"
     elif [ "$FORCE" == "n" ]; then
       log $LOG_NORMAL "[INFO] File exists, exiting: $target_path/$target_file"
       exit 0
