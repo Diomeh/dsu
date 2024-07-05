@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-VERSION="v2.1.27"
+VERSION="v2.1.28"
 
 # Log levels
 #LOG_SILENT=0
@@ -82,28 +82,28 @@ log() {
   local message="$2"
 
   case "$level" in
-    0)
-      # Silent mode. No output
-      ;;
-    1)
-      if [ "$LOG" -ge $LOG_QUIET ]; then
-        echo "$message"
-      fi
-      ;;
-    2)
-      if [ "$LOG" -ge $LOG_NORMAL ]; then
-        echo "$message"
-      fi
-      ;;
-    3)
-      if [ "$LOG" -ge $LOG_VERBOSE ]; then
-        echo "$message"
-      fi
-      ;;
-    *)
-      echo "[ERROR] Invalid log level: $level" >&2
-      exit 1
-      ;;
+  0)
+    # Silent mode. No output
+    ;;
+  1)
+    if [ "$LOG" -ge $LOG_QUIET ]; then
+      echo "$message"
+    fi
+    ;;
+  2)
+    if [ "$LOG" -ge $LOG_NORMAL ]; then
+      echo "$message"
+    fi
+    ;;
+  3)
+    if [ "$LOG" -ge $LOG_VERBOSE ]; then
+      echo "$message"
+    fi
+    ;;
+  *)
+    echo "[ERROR] Invalid log level: $level" >&2
+    exit 1
+    ;;
   esac
 }
 
@@ -122,7 +122,7 @@ arg_parse() {
     # and expand them into separate arguments
     # eg. -qy becomes -q -y
     for ((i = 1; i < ${#1}; i++)); do
-      expanded_args+=("-${1:$i:1}")
+      expanded_args+=("-${1:i:1}")
     done
 
     shift
@@ -134,55 +134,55 @@ arg_parse() {
   # Parse long arguments
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -h | --help)
-        usage
-        exit 0
-        ;;
-      -v | --version)
-        version
-        exit 0
-        ;;
-      -d | --dry)
-        DRY="y"
-        shift
-        ;;
-      -f | --force)
-        FORCE="$2"
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -v | --version)
+      version
+      exit 0
+      ;;
+    -d | --dry)
+      DRY="y"
+      shift
+      ;;
+    -f | --force)
+      FORCE="$2"
 
-        if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
-          log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
-          exit 1
-        fi
+      if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
+        log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+        exit 1
+      fi
 
-        shift 2
-        ;;
-      -l | --log)
-        LOG="$2"
+      shift 2
+      ;;
+    -l | --log)
+      LOG="$2"
 
-        if [[ ! $LOG =~ ^[0-3]$ ]]; then
-          log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
-          exit 1
-        fi
+      if [[ ! $LOG =~ ^[0-3]$ ]]; then
+        log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+        exit 1
+      fi
 
-        shift 2
-        ;;
-      -*)
-        log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+      shift 2
+      ;;
+    -*)
+      log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      if [ -z "$SOURCE" ]; then
+        SOURCE="$1"
+      elif [ -z "$TARGET" ]; then
+        TARGET="$1"
+      else
+        log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
         usage
         exit 1
-        ;;
-      *)
-        if [ -z "$SOURCE" ]; then
-          SOURCE="$1"
-        elif [ -z "$TARGET" ]; then
-          TARGET="$1"
-        else
-          log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
-          usage
-          exit 1
-        fi
-        shift
-        ;;
+      fi
+      shift
+      ;;
     esac
   done
 
