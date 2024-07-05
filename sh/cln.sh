@@ -18,9 +18,10 @@ Replace all special characters in filenames within the specified directories.
 If no directories are provided, the script will operate in the current directory.
 
 Options:
-  -h, --help      Show this help message and exit.
-  -v, --version   Display the version of this script and exit
-  -d, --dry       Dry run. Print the operations that would be performed without actually executing them.
+  -h, --help              Show this help message and exit.
+  -v, --version           Display the version of this script and exit
+  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
+  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
 
 Examples:
   Replace special characters in filenames in the current directory.
@@ -46,6 +47,25 @@ version() {
   echo "$(basename "$0") version $VERSION"
 }
 
+check_version() {
+  echo "[INFO] Current version: $VERSION"
+  echo "[INFO] Checking for updates..."
+
+  local remote_version
+  remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+
+  # strip leading and trailing whitespace
+  remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+
+  # Check if the remote version is different from the local version
+  if [ "$remote_version" != "$VERSION" ]; then
+    echo "[INFO] A new version of $(basename "$0") ($remote_version) is available!"
+    echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
+  else
+    echo "[INFO] You are running the latest version of $(basename "$0")."
+  fi
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -57,6 +77,10 @@ parse_args() {
         version
         exit 0
         ;;
+    -c | --check-version)
+      check_version
+      exit 0
+      ;;
       -d | --dry)
         DRY="y"
         shift

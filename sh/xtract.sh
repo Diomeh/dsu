@@ -51,26 +51,27 @@ Usage: $(basename "$0") [options] <archive> [target]
 Extracts the contents of a compressed archive to a directory.
 
 Arguments:
-  <archive>           The path to the compressed archive file.
-  [target]            Optional. The directory where the contents will be extracted. Defaults to the current directory
-                      or a directory named after the archive file if contents are not immediately inside a folder.
+  <archive>               The path to the compressed archive file.
+  [target]                Optional. The directory where the contents will be extracted. Defaults to the current directory
+                          or a directory named after the archive file if contents are not immediately inside a folder.
 
 Options:
-  -l, --list          List the contents of the archive.
-  -h, --help          Show this help message and exit.
-  -v, --version       Show the version of this script and exit.
-  -d, --dry           Dry run. Print the operations that would be performed without actually executing them.
+  -l, --list              List the contents of the archive.
+  -h, --help              Show this help message and exit.
+  -v, --version           Show the version of this script and exit.
+  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
   -f, --force <y/n/ask>
-                      Force mode. One of (ask by default):
-                        - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
-                        - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
-                        - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
+                          Force mode. One of (ask by default):
+                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+                            - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
   -L, --log <level>
-                      Log level. One of (2 by default):
-                        - 0: Silent mode. No output
-                        - 1: Quiet mode. Only errors
-                        - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                        - 3: Verbose mode. Detailed information about the operations being performed.
+                          Log level. One of (2 by default):
+                            - 0: Silent mode. No output
+                            - 1: Quiet mode. Only errors
+                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
+                            - 3: Verbose mode. Detailed information about the operations being performed.
+  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
 
 Behavior:
 - If the target directory is not specified, the archive is extracted to the current directory.
@@ -111,6 +112,25 @@ EOF
 
 version() {
   echo "$(basename "$0") version $VERSION"
+}
+
+check_version() {
+  echo "[INFO] Current version: $VERSION"
+  echo "[INFO] Checking for updates..."
+
+  local remote_version
+  remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+
+  # strip leading and trailing whitespace
+  remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+
+  # Check if the remote version is different from the local version
+  if [ "$remote_version" != "$VERSION" ]; then
+    echo "[INFO] A new version of $(basename "$0") ($remote_version) is available!"
+    echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
+  else
+    echo "[INFO] You are running the latest version of $(basename "$0")."
+  fi
 }
 
 log() {
@@ -176,6 +196,10 @@ arg_parse() {
       ;;
     -v | --version)
       version
+      exit 0
+      ;;
+    -c | --check-version)
+      check_version
       exit 0
       ;;
     -l | --list)
