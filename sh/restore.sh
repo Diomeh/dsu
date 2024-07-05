@@ -26,25 +26,26 @@ Usage: $(basename "$0") [options] <source> [target]
 Restore a file or directory from a timestamped backup.
 
 Arguments:
-  [options]       Additional options to customize the behavior.
-  <source>        The path to the file, directory, or symlink to restore.
-  [target]        Optional. The directory where to put the restored backup. Defaults to the current directory.
+  [options]               Additional options to customize the behavior.
+  <source>                The path to the file, directory, or symlink to restore.
+  [target]                Optional. The directory where to put the restored backup. Defaults to the current directory.
 
 Options:
-  -h, --help      Display this help message and exit
-  -v, --version   Display the version of this script and exit
-  -d, --dry       Dry run. Print the operations that would be performed without actually executing them.
+  -h, --help              Display this help message and exit
+  -v, --version           Display the version of this script and exit
+  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
   -f, --force <y/n/ask>
-                  Force mode. One of (ask by default):
-                    - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
-                    - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
-                    - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
+                          Force mode. One of (ask by default):
+                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+                            - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
   -l, --log <level>
-                  Log level. One of (2 by default):
-                    - 0: Silent mode. No output
-                    - 1: Quiet mode. Only errors
-                    - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                    - 3: Verbose mode. Detailed information about the operations being performed.
+                          Log level. One of (2 by default):
+                            - 0: Silent mode. No output
+                            - 1: Quiet mode. Only errors
+                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
+                            - 3: Verbose mode. Detailed information about the operations being performed.
+  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
 
 Behavior:
   Restores the file or directory from a specified backup file.
@@ -75,6 +76,25 @@ EOF
 
 version() {
   echo "$(basename "$0") version $VERSION"
+}
+
+check_version() {
+  echo "[INFO] Current version: $VERSION"
+  echo "[INFO] Checking for updates..."
+
+  local remote_version
+  remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+
+  # strip leading and trailing whitespace
+  remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+
+  # Check if the remote version is different from the local version
+  if [ "$remote_version" != "$VERSION" ]; then
+    echo "[INFO] A new version of $(basename "$0") ($remote_version) is available!"
+    echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
+  else
+    echo "[INFO] You are running the latest version of $(basename "$0")."
+  fi
 }
 
 log() {
@@ -140,6 +160,10 @@ arg_parse() {
       ;;
     -v | --version)
       version
+      exit 0
+      ;;
+    -c | --check-version)
+      check_version
       exit 0
       ;;
     -d | --dry)
