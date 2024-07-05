@@ -4,21 +4,34 @@
 
 set -euo pipefail
 
-VERSION="v2.1.26"
+VERSION="v2.1.27"
+
+# Log levels
+LOG_SILENT=0
+LOG_QUIET=1
+LOG_NORMAL=2
+LOG_VERBOSE=3
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [options] <archive> [target]
 Extracts the contents of a compressed archive to a directory.
 
+Arguments:
+  <archive>           The path to the compressed archive file.
+  [target]            Optional. The directory where the contents will be extracted. Defaults to the current directory
+                      or a directory named after the archive file if contents are not immediately inside a folder.
+
 Options:
   -l, --list          List the contents of the archive.
   -h, --help          Show this help message and exit.
   -v, --version       Show the version of this script and exit.
-
-Arguments:
-  <archive>           The path to the compressed archive file.
-  [target]            Optional. The directory where the contents will be extracted. Defaults to the current directory or a directory named after the archive file if contents are not immediately inside a folder.
+  -l, --log <level>
+                  Log level. One of (2 by default):
+                    - 0: Silent mode. No output
+                    - 1: Quiet mode. Only errors
+                    - 2: Normal mode. Errors warnings and information. This is the default behavior.
+                    - 3: Verbose mode. Detailed information about the operations being performed.
 
 Behavior:
 - If the target directory is not specified, the archive is extracted to the current directory.
@@ -86,6 +99,36 @@ version() {
   echo "$(basename "$0") version $VERSION"
 }
 
+log() {
+  local level="$1"
+  local message="$2"
+
+  case "$level" in
+    0)
+      # Silent mode. No output
+      ;;
+    1)
+      if [ "$LOG" -ge $LOG_QUIET ]; then
+        echo "$message"
+      fi
+      ;;
+    2)
+      if [ "$LOG" -ge $LOG_NORMAL ]; then
+        echo "$message"
+      fi
+      ;;
+    3)
+      if [ "$LOG" -ge $LOG_VERBOSE ]; then
+        echo "$message"
+      fi
+      ;;
+    *)
+      echo "[ERROR] Invalid log level: $level" >&2
+      exit 1
+      ;;
+  esac
+}
+
 process_archive() {
   local action="$1"
   local archive="$2"
@@ -94,25 +137,25 @@ process_archive() {
   local dependency list_flag extract_flag target_dir_flag
 
   if [[ -z ${archive_types[${archive##*.}]:-} ]]; then
-    echo "[ERROR] Unsupported archive type: $archive" >&2
+    log $LOG_QUIET "[ERROR] Unsupported archive type: $archive" >&2
     exit 1
   fi
 
   read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 
   if ! command -v "$dependency" &>/dev/null; then
-    echo "[ERROR] $dependency is needed but not found." >&2
+    log $LOG_QUIET "[ERROR] $dependency is needed but not found." >&2
     exit 1
   fi
 
   if [[ ! -f $archive ]]; then
-    echo "[ERROR] Not a valid archive: $archive" >&2
+    log $LOG_QUIET "[ERROR] Not a valid archive: $archive" >&2
     exit 1
   fi
 
   if [[ ! -d $target_dir ]]; then
     mkdir -p "$target_dir" || {
-      echo "[ERROR] Permission denied: $target_dir" >&2
+      log $LOG_QUIET "[ERROR] Permission denied: $target_dir" >&2
       exit 1
     }
   fi
@@ -123,11 +166,11 @@ process_archive() {
     # Create a temporary directory to extract the contents
     local temp_dir
     temp_dir=$(mktemp -d) || {
-      echo "[ERROR] Could not create temporary directory" >&2
+      log $LOG_QUIET "[ERROR] Could not create temporary directory" >&2
       exit 1
     }
 
-    echo "[INFO] Extracting $archive to $target_dir..."
+    log $LOG_NORMAL "[INFO] Extracting $archive to $target_dir..."
 
     if [[ -z ${target_dir_flag:-} ]]; then
       if [[ $dependency == "unzip" ]]; then
@@ -148,7 +191,7 @@ process_archive() {
     # Check exit status of the extraction command
     local exit_code=$?
     if [ "$exit_code" -ne 0 ]; then
-      echo "[ERROR] Extraction failed with exit code $exit_code" >&2
+      log $LOG_QUIET "[ERROR] Extraction failed with exit code $exit_code" >&2
       exit 1
     fi
 
@@ -163,7 +206,7 @@ process_archive() {
     # Remove the temporary directory
     rmdir "$temp_dir"
 
-    echo "[INFO] Extraction complete: $target_dir/$(basename "$archive" ."$archive_extension")"
+    log $LOG_NORMAL "[INFO] Extraction complete: $target_dir/$(basename "$archive" ."$archive_extension")"
     ;;
   esac
 }
@@ -192,7 +235,7 @@ main() {
       break
       ;;
     -*)
-      echo "[ERROR] Unknown option: $1" >&2
+      log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
       usage
       exit 1
       ;;
