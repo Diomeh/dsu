@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+VERSION="v2.1.26"
+
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [options] <archive> [target]
@@ -12,6 +14,7 @@ Extracts the contents of a compressed archive to a directory.
 Options:
   -l, --list          List the contents of the archive.
   -h, --help          Show this help message and exit.
+  -v, --version       Show the version of this script and exit.
 
 Arguments:
   <archive>           The path to the compressed archive file.
@@ -78,6 +81,10 @@ declare -A archive_types=(
   # ["bz2"]="bzip2 - -dc >"
   # ["xz"]="unxz -l -dc >"
 )
+
+version() {
+  echo "$(basename "$0") version $VERSION"
+}
 
 process_archive() {
   local action="$1"
@@ -174,6 +181,10 @@ main() {
       ;;
     -h | --help)
       usage
+      exit 0
+      ;;
+    -v | --version)
+      version
       exit 0
       ;;
     --)

@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+VERSION="v2.1.26"
+
 usage() {
   cat <<EOF
 Usage: $0 <directory>
@@ -14,6 +16,7 @@ directory is used by default.
 
 Options:
   -h, --help          Show this help message and exit.
+  -v, --version       Show the version of this script and exit.
 
 Arguments:
   DIRECTORY           The directory to analyze. If not specified, the current directory (.) is used.
@@ -29,13 +32,38 @@ Notes:
 EOF
 }
 
-case $# in
-0) dir='.' ;;
-1) dir=$1 ;;
-*)
-  usage
-  exit 0
-  ;;
-esac
+version() {
+  echo "$(basename "$0") version $VERSION"
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -v | --version)
+      version
+      exit 0
+      ;;
+    *)
+      if [ -z "$dir" ] && [ -d "$1" ]; then
+        dir="$1"
+      else
+        echo "[ERROR] Unknown option: $1" >&2
+        usage
+        exit 1
+      fi
+      shift
+      ;;
+    esac
+  done
+}
+
+parse_args "$@"
+
+# Default to current directory if no directory is specified
+dir="${dir:-.}"
 
 du -s --one-file-system "$dir/*" "$dir/.[A-Za-z0-9]*" | sort -rn | head
