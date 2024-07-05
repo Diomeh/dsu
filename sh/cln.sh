@@ -5,7 +5,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-VERSION="v2.1.29"
+VERSION="v2.1.30"
 
 # Dry run flag
 DRY="n"
