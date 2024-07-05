@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-VERSION="v2.1.25"
+VERSION="v2.1.26"
 
 # Log levels
 LOG_SILENT=0
