@@ -23,12 +23,12 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") [options] <source> [target]
 
-Create a timestamped backup of a file or directory.
+Restore a file or directory from a timestamped backup.
 
 Arguments:
   [options]       Additional options to customize the behavior.
-  <source>        The path to the file, directory, or symlink to back up.
-  [target]        Optional. The directory where file backup will be stored. Defaults to the current directory.
+  <source>        The path to the file, directory, or symlink to restore.
+  [target]        Optional. The directory where to put the restored backup. Defaults to the current directory.
 
 Options:
   -h, --help      Display this help message and exit
@@ -47,9 +47,9 @@ Options:
                     - 3: Verbose mode. Detailed information about the operations being performed.
 
 Behavior:
-  Creates a backup file with a timestamp in the name to avoid overwriting previous backups.
-  If the backup directory is not specified, the backup file will be created in the current directory.
-  If the backup directory does not exist, it will be created (assuming the correct permissions are set).
+  Restores the file or directory from a specified backup file.
+  If the target file or directory already exists, the user will be prompted for confirmation.
+  The optional argument [target] will be treated as the target directory where the backup file will be restored.
   By default, the script will prompt for confirmation before overwriting existing backups unless the force mode is set to 'y' or 'n'.
 
 Naming Convention:
@@ -60,11 +60,11 @@ Naming Convention:
     /home/user/backups/hosts.2024-07-04_12-00-00.bak
 
 Examples:
-  Create a backup of /etc/hosts in the current directory:
-    $(basename "$0") -b /etc/hosts
+  Restore the backup file to the current working directory:
+    $(basename "$0") -r /home/user/backups/hosts.2024-07-04_12-00-00.bak
 
-  Create a backup of /etc/hosts in /home/user/backups:
-    $(basename "$0") -b /etc/hosts /home/user/backups
+  Restore the backup file to a specified directory (e.g., ~/Documents):
+    $(basename "$0") -r /home/user/backups/hosts.2024-07-04_12-00-00.bak ~/Documents
 
 Note:
 - Ensure you have the necessary permissions to read/write files and directories involved in the operations.
@@ -255,47 +255,50 @@ prepare_target() {
 }
 
 run() {
-  local filename
-  local timestamp
+  local target_path="$TARGET"
+  local target_file
 
-  filename=$(basename "$SOURCE")
-  timestamp=$(date +%Y-%m-%d_%H-%M-%S)
+  # Check if the file name matches the backup pattern: file.2019-01-01_00-00-00.bak
+  if [[ "$(basename "$SOURCE")" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.bak$ ]]; then
+    # Extract the base filename without the backup extension
+    target_file="${BASH_REMATCH[1]}"
+  else
+    log $LOG_QUIET "[ERROR] Not a valid backup file: $SOURCE" >&2
+    log $LOG_NORMAL "[INFO] Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
+    exit 1
+  fi
 
-  local backup_path="$TARGET/$filename.$timestamp.bak"
+  log $LOG_NORMAL "[INFO] Restoring backup file: $SOURCE"
+  log $LOG_NORMAL "[INFO] To target: $target_path/$target_file"
 
-  log $LOG_VERBOSE "[INFO] Creating file backup: $SOURCE"
-  log $LOG_VERBOSE "[INFO] To backup target: $backup_path"
-
-  if [ -e "$backup_path" ]; then
+  # Ask for confirmation if target_file exists
+  if [ -e "$target_path/$target_file" ]; then
     if [ $DRY == "y" ]; then
-      log $LOG_NORMAL "[DRY] Would remove existing backup: $backup_path"
+      log $LOG_NORMAL "[DRY] Would overwrite existing file: $target_path/$target_file"
     elif [ "$FORCE" == "y" ]; then
-      log $LOG_VERBOSE "[INFO] Removing existing backup: $backup_path"
-      rm -rf "$backup_path"
+      log $LOG_NORMAL "[INFO] Overwriting existing file: $target_path/$target_file"
+      rm -rf "${target_path:?}/$target_file"
     elif [ "$FORCE" == "n" ]; then
-      log $LOG_NORMAL "[INFO] Backup target already exists: $backup_path. Exiting..."
+      log $LOG_NORMAL "[INFO] File exists, exiting: $target_path/$target_file"
       exit 0
     else
-      log $LOG_NORMAL "[WARN] Backup target already exists: $backup_path"
-      read -p "Overwrite backup? [y/N] " -n 1 -r
-      echo ""
-      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      log $LOG_NORMAL "[WARN] File or directory already exists: $target_file"
+      read -p "Overwrite $target_file? [y/N] " -r response
+      if [[ ! $response =~ ^[Yy]$ ]]; then
         exit 0
       fi
     fi
   fi
 
   if [ $DRY == "y" ]; then
-    log $LOG_NORMAL "[DRY] Would create backup: $backup_path"
+    log $LOG_NORMAL "[DRY] Would restore backup: $SOURCE -> $target_path/$target_file"
   else
-    # create the backup
-    if [ -d "$SOURCE" ]; then
-      cp -r "$SOURCE" "$backup_path"
-    else
-      cp "$SOURCE" "$backup_path"
-    fi
+    cp -r "$SOURCE" "$target_path/$target_file" || {
+      log $LOG_QUIET "[ERROR] Failed to restore backup" >&2
+      exit 1
+    }
 
-    log $LOG_NORMAL "[INFO] Created backup: $backup_path"
+    log $LOG_NORMAL "[INFO] Backup restored: $SOURCE -> $target_path/$target_file"
   fi
 }
 

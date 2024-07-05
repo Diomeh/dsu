@@ -5,7 +5,12 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-print_usage() {
+VERSION="v2.1.29"
+
+# Dry run flag
+DRY="n"
+
+usage() {
   cat <<EOF
 Usage: $(basename "$0") [directories...]
 
@@ -13,7 +18,9 @@ Replace all special characters in filenames within the specified directories.
 If no directories are provided, the script will operate in the current directory.
 
 Options:
-  -h, --help    Show this help message and exit.
+  -h, --help      Show this help message and exit.
+  -v, --version   Display the version of this script and exit
+  -d, --dry       Dry run. Print the operations that would be performed without actually executing them.
 
 Examples:
   Replace special characters in filenames in the current directory.
@@ -33,6 +40,34 @@ Note:
 - Ensure you have the necessary permissions to read/write files in the specified directories.
 - Filenames that only differ by special characters might result in name conflicts after replacement.
 EOF
+}
+
+version() {
+  echo "$(basename "$0") version $VERSION"
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      -v | --version)
+        version
+        exit 0
+        ;;
+      -d | --dry)
+        DRY="y"
+        shift
+        ;;
+      *)
+        echo "[ERROR] Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
+    esac
+  done
 }
 
 replace_special_chars() {
@@ -66,10 +101,19 @@ replace_special_chars() {
     return
   fi
 
-  echo "[INFO] Renaming: $filename -> $newname"
+  if [ "$DRY" == "y" ]; then
+    echo "[DRY] Would rename: $filename -> $newname"
+  else
+    echo "[INFO] Renaming: $filename -> $newname"
+  fi
 
   # Check if target file already exists
   if [ -e "$target" ]; then
+    if [ "$DRY" == "y" ]; then
+      echo "[DRY] Would prompt for overwriting: $target"
+      return 0
+    fi
+
     read -p "File already exists. Overwrite? [y/N] " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -83,16 +127,7 @@ replace_special_chars() {
   mv "$filepath" "$target"
 }
 
-# If no arguments are provided, use the current directory
-if [ "$#" -eq 0 ]; then
-  set -- .
-fi
-
-# If -h or --help flag is provided, print usage and exit
-if [[ $1 == "-h" || $1 == "--help" ]]; then
-  print_usage
-  exit 0
-fi
+parse_args "$@"
 
 # Loop through arguments
 for file in "$@"; do

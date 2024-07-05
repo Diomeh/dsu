@@ -2,6 +2,10 @@
 #
 # -*- mode: shell-script -*-
 
+set -euo pipefail
+
+VERSION="v2.1.26"
+
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [options]
@@ -9,7 +13,8 @@ Usage: $(basename "$0") [options]
 Pastes clipboard contents to stdin depending on the session type (Wayland or Xorg).
 
 Options:
-  -h, --help    Show this help message and exit.
+  -h, --help          Show this help message and exit.
+  -v, --version       Show the version of this script and exit.
 
 Behavior:
 - If running under Wayland, the script uses wl-paste to paste the clipboard contents.
@@ -28,11 +33,19 @@ Examples:
 EOF
 }
 
+version() {
+  echo "$(basename "$0") version $VERSION"
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
     -h | --help)
       usage
+      exit 0
+      ;;
+    -v | --version)
+      version
       exit 0
       ;;
     *)
