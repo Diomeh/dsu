@@ -5,7 +5,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-VERSION="v2.1.30"
+VERSION="v2.1.31"
 BASENAME=$(basename "$0")
 
 # Log levels
