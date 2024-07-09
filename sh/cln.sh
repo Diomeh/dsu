@@ -6,9 +6,15 @@ set -euo pipefail
 IFS=$'\n\t'
 
 VERSION="v2.1.30"
+BASENAME=$(basename "$0")
 
-# Dry run flag
+# arguments and options
 DRY="n"
+RECURSE="n"
+RECURSE_DEPTH=""
+
+# Paths to process
+PATHS=()
 
 usage() {
   cat <<EOF
@@ -22,16 +28,21 @@ Options:
   -v, --version           Display the version of this script and exit
   -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
   -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
+  -r, --recursive         Recursively process all files in the specified directories.
+  -n, --recurse-depth <n> The maximum number of subdirectories to recurse into. Default is unlimited.
 
 Examples:
   Replace special characters in filenames in the current directory.
-    $(basename "$0")
+    $BASENAME
 
   Replace special characters in filenames within ~/Documents.
-    $(basename "$0") ~/Documents
+    $BASENAME ~/Documents
 
   Replace special characters in filenames within ./foo and /bar.
-    $(basename "$0") ./foo /bar
+    $BASENAME ./foo /bar
+
+  Replace special characters in filenames recursively within ~/Documents.
+    $BASENAME -r ~/Documents
 
 Special Character Replacement:
 - The script replaces characters that are not alphanumeric or hyphens with underscores.
@@ -44,7 +55,7 @@ EOF
 }
 
 version() {
-  echo "$(basename "$0") version $VERSION"
+  echo "$BASENAME version $VERSION"
 }
 
 check_version() {
@@ -59,10 +70,10 @@ check_version() {
 
   # Check if the remote version is different from the local version
   if [ "$remote_version" != "$VERSION" ]; then
-    echo "[INFO] A new version of $(basename "$0") ($remote_version) is available!"
+    echo "[INFO] A new version of $BASENAME ($remote_version) is available!"
     echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
   else
-    echo "[INFO] You are running the latest version of $(basename "$0")."
+    echo "[INFO] You are running the latest version of $BASENAME."
   fi
 }
 
@@ -100,21 +111,45 @@ parse_args() {
         version
         exit 0
         ;;
-    -c | --check-version)
-      check_version
-      exit 0
-      ;;
+      -c | --check-version)
+        check_version
+        exit 0
+        ;;
       -d | --dry)
         DRY="y"
         shift
         ;;
-      *)
+      -r | --recursive)
+        RECURSE="y"
+        shift
+        ;;
+      -n | --recurse-depth)
+        RECURSE_DEPTH="$2"
+
+        # Validate depth is a positive integer
+        if ! [[ "$RECURSE_DEPTH" =~ ^[0-9]+$ ]]; then
+          echo "[ERROR] Invalid recursion depth: $RECURSE_DEPTH" >&2
+          exit 1
+        fi
+
+        shift 2
+        ;;
+      -*)
         echo "[ERROR] Unknown option: $1" >&2
         usage
         exit 1
         ;;
+      *)
+        PATHS+=("$1")
+        shift
+        ;;
     esac
   done
+
+  # If no paths are provided, default to the current directory
+  if [ ${#PATHS[@]} -eq 0 ]; then
+    PATHS+=(".")
+  fi
 }
 
 replace_special_chars() {
@@ -174,18 +209,55 @@ replace_special_chars() {
   mv "$filepath" "$target"
 }
 
-parse_args "$@"
+process_paths() {
+  local depth=$1
+  shift
+  local paths=("$@")
 
-# Loop through arguments
-for file in "$@"; do
-  # If argument is a directory, loop through all files in the directory
-  if [ -d "$file" ]; then
-    for f in "$file"/*; do
-      replace_special_chars "$f"
-    done
-    continue
-  else
-    # If argument is a file, replace special characters in the file name
-    replace_special_chars "$file"
-  fi
-done
+  for path in "${paths[@]}"; do
+    if [ ! -e "$path" ]; then
+      echo "[ERROR] $path: No such file or directory" >&2
+      continue
+    fi
+
+    if [ ! -r "$path" ]; then
+      echo "[ERROR] $path: Permission denied" >&2
+      continue
+    fi
+
+    # Process single file
+    if [ -f "$path" ]; then
+      replace_special_chars "$path"
+      continue
+    fi
+
+    # Process all files in the directory
+    if [ "$RECURSE" != "y" ]; then
+      for file in "$path"/*; do
+        replace_special_chars "$file"
+      done
+      continue
+    fi
+
+    # Don't forget to process the directory itself
+    replace_special_chars "$path"
+
+    # Recursively process directories
+    if [ "$depth" -gt 0 ]; then
+      for file in "$path"/*; do
+        if [ -d "$file" ]; then
+          process_paths "$((depth - 1))" "$file"
+        else
+          replace_special_chars "$file"
+        fi
+      done
+    fi
+  done
+}
+
+main() {
+  parse_args "$@"
+  process_paths "$RECURSE_DEPTH" "${PATHS[@]}"
+}
+
+main "$@"
