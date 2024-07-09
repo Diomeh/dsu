@@ -67,6 +67,29 @@ check_version() {
 }
 
 parse_args() {
+  # Expand combined short options (e.g., -dr to -d -r)
+  expanded_args=()
+  while [[ $# -gt 0 ]]; do
+    # If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
+    if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
+      expanded_args+=("$1")
+      shift
+      continue
+    fi
+
+    # Iterate over all combined short options
+    # and expand them into separate arguments
+    # eg. -qy becomes -q -y
+    for ((i = 1; i < ${#1}; i++)); do
+      expanded_args+=("-${1:i:1}")
+    done
+
+    shift
+  done
+
+  # Reset positional parameters to expanded arguments
+  set -- "${expanded_args[@]}"
+
   while [[ $# -gt 0 ]]; do
     case $1 in
       -h | --help)
