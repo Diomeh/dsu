@@ -4,117 +4,244 @@
 
 set -euo pipefail
 
+# Log levels
+#LOG_SILENT=0
+LOG_QUIET=1
+LOG_NORMAL=2
+LOG_VERBOSE=3
+LOG=$LOG_NORMAL
+
+CONFIG_PATH="$HOME/.config/dsu"
+CONFIG_FILE="$CONFIG_PATH/dsu.conf"
+LOG_FILE="$CONFIG_PATH/dsu.log"
+
+DRY="n"
+FORCE="ask"
+
 usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
-Uninstall scripts listed in the specified .install file or search for sh/* in the install directory.
+
+Removes the installed binaries and configuration files of the Diomeh's Script Utilities.
 
 Options:
-  -p, --path    Specify the path to the .install file (default: ./<script directory>/.install)
-  -h, --help    Show this help message and exit
-
-Example:
-    $(basename "$0") -p ~/.install
+  -h, --help              Display this help message and exit
+  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
+  -f, --force <y/n/ask>   Force mode. One of (ask by default):
+                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+                            - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
+  -l, --log <level>       Log level. One of (2 by default):
+                            - 0: Silent mode. No output
+                            - 1: Quiet mode. Only errors
+                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
+                            - 3: Verbose mode. Detailed information about the operations being performed.
 EOF
 }
 
-check_root() {
-    if [ "$EUID" -ne 0 ]; then
-        echo "Error: Please run as root" >&2
-        exit 1
-    fi
+log() {
+  local level="$1"
+  local message="$2"
+
+  case "$level" in
+    0)
+      # Silent mode. No output
+      ;;
+    1)
+      if [ "$LOG" -ge $LOG_QUIET ]; then
+        echo "$message"
+      fi
+      ;;
+    2)
+      if [ "$LOG" -ge $LOG_NORMAL ]; then
+        echo "$message"
+      fi
+      ;;
+    3)
+      if [ "$LOG" -ge $LOG_VERBOSE ]; then
+        echo "$message"
+      fi
+      ;;
+    *)
+      echo "[ERROR] Invalid log level: $level" >&2
+      exit 1
+      ;;
+  esac
 }
 
-parse_arguments() {
-    local install_file="$1/.install"
-    local src_dir="$1/sh"
-    local install_dir="/usr/local/bin"
-
-    while [[ "$#" -gt 1 ]]; do
-        case "$2" in
-            -p|--path)
-                install_file="$3"
-                shift 2
-                ;;
-            -h|--help)
-                usage
-                exit 0
-                ;;
-            *)
-                echo "Error: Unknown option: $2" >&2
-                usage
-                exit 1
-                ;;
-        esac
-    done
-
-    echo "$install_file:$src_dir:$install_dir"
-}
-
-uninstall_scripts_from_install_file() {
-    local install_file="$1"
-    local install_dir
-    install_dir=$(head -n 1 "$install_file")
-
-    if [ ! -d "$install_dir" ]; then
-        echo "Error: Install directory $install_dir does not exist" >&2
-        exit 1
+arg_parse() {
+  # Expand combined short options (e.g., -qy to -q -y)
+  expanded_args=()
+  while [[ $# -gt 0 ]]; do
+    # If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
+    if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
+      expanded_args+=("$1")
+      shift
+      continue
     fi
 
-    echo "Uninstalling scripts from $install_dir listed in $install_file"
-
-    tail -n +2 "$install_file" | while read -r script_name; do
-        if [ -f "$install_dir/$script_name" ]; then
-            echo "Uninstalling $install_dir/$script_name"
-            rm "$install_dir/$script_name"
-        else
-            echo "Error: $install_dir/$script_name does not exist" >&2
-        fi
+    # Iterate over all combined short options
+    # and expand them into separate arguments
+    # eg. -qy becomes -q -y
+    for ((i = 1; i < ${#1}; i++)); do
+      expanded_args+=("-${1:i:1}")
     done
 
-    rm "$install_file"
-}
+    shift
+  done
 
-search_and_uninstall_scripts() {
-    local src_dir="$1"
-    local install_dir="$2"
-    local install_file="$3"
+  # Reset positional parameters to expanded arguments
+  set -- "${expanded_args[@]}"
 
-    local response
-    read -p "$install_file not found. Search for scripts from $src_dir in $install_dir? [y/N] " -r response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        echo "Exiting"
+  # Parse long arguments
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
         exit 0
+        ;;
+      -d | --dry)
+        DRY="y"
+        shift
+        ;;
+      -f | --force)
+        FORCE="$2"
+
+        if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
+          log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+          exit 1
+        fi
+
+        shift 2
+        ;;
+      -l | --log)
+        LOG="$2"
+
+        if [[ ! $LOG =~ ^[0-3]$ ]]; then
+          log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+          exit 1
+        fi
+
+        shift 2
+        ;;
+      -*)
+        log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+        usage
+        exit 1
+        ;;
+      *)
+        log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  # Will only happen when on verbose mode
+  log $LOG_VERBOSE "[INFO] Running verbose log level"
+
+  if [ "$FORCE" == "y" ]; then
+    log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+  elif [ "$FORCE" == "n" ]; then
+    log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+  else
+    log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
+  fi
+
+  if [ $DRY == "y" ]; then
+    log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
+  fi
+}
+
+path_needs_sudo() {
+  local path="$1"
+
+  while true; do
+    # Safeguard, prevent infinite loop
+    if [ -z "$path" ]; then
+      echo "Error: provided path is not valid: $1" >&2
+      exit 1
+    fi
+    if [ "$path" == "/" ]; then
+      echo "y"
+      break
     fi
 
-    for script in "$src_dir"/*; do
-        [ -f "$script" ] || continue
-
-        local script_name
-        script_name=$(basename "${script%.*}")
-
-        if [ -f "$install_dir/$script_name" ]; then
-            echo "Uninstalling $install_dir/$script_name"
-            rm "$install_dir/$script_name"
-        else
-            echo "Error: $install_dir/$script_name does not exist" >&2
-        fi
-    done
+    # if exists, check write permissions
+    if [ -e "$path" ]; then
+      if [ -w "$path" ]; then
+        echo "n"
+        break
+      else
+        echo "y"
+        break
+      fi
+    else
+      # if doesn't exist, set path to parent directory and check again
+      path=$(dirname "$path")
+      continue
+    fi
+  done
 }
 
 main() {
-    check_root
+  arg_parse "$@"
 
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [ ! -e "$CONFIG_FILE" ]; then
+    echo "Nothing to uninstall. Configuration file not found: $CONFIG_FILE"
+    exit 0
+  fi
 
-    IFS=":" read -r install_file src_dir install_dir <<< "$(parse_arguments "$script_dir" "$@")"
+  local type=""
+  local path=""
+  local binaries=()
 
-    if [ -f "$install_file" ]; then
-        uninstall_scripts_from_install_file "$install_file"
-    else
-        search_and_uninstall_scripts "$src_dir" "$install_dir" "$install_file"
+  local use_sudo
+  local sudo_command=""
+
+  # Read the config file
+  while IFS= read -r line; do
+    # Skip comments and empty lines
+    [[ "$line" =~ ^#.* ]] && continue
+    [[ -z "$line" ]] && continue
+
+    # Read type and path
+    if [[ "$line" =~ ^type= ]]; then
+      type="${line#*=}"
+    elif [[ "$line" =~ ^path= ]]; then
+      path="${line#*=}"
+    elif [[ "$line" =~ ^[[:space:]] ]]; then
+      binaries+=("${line// /}")
     fi
+  done <"$CONFIG_FILE"
+
+  echo "Removing existing $type installation from $path..."
+
+  use_sudo="$(path_needs_sudo "$path")"
+  if [ "$use_sudo" == "y" ]; then
+    sudo_command="sudo"
+
+    echo "Permission denied: $path" >&2
+
+    # Elevate permissions? Prompt the user
+    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Aborting..."
+      exit 0
+    fi
+  fi
+
+  for binary in "${binaries[@]}"; do
+    $sudo_command rm -f "$path/$binary" || {
+      echo "Failed to remove binary: $path/$binary" >&2
+      exit 1
+    }
+  done
+
+  rm "$CONFIG_FILE"
+  rm "$LOG_FILE"
+  rmdir "$CONFIG_PATH"
 }
 
 main "$@"

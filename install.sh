@@ -492,10 +492,6 @@ remove_previous_install() {
     fi
   done <"$CONFIG_FILE"
 
-  echo "Type: $type"
-  echo "Path: $path"
-  echo "Binaries: ${binaries[*]}"
-
   echo "Removing existing $type installation from $path..."
 
   use_sudo="$(path_needs_sudo "$path")"
