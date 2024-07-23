@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 #
+# Installer for DSU shell utilities
+#
+# Author: David Urbina (davidurbina.dev@gmail.com)
+# Date: 2022-02
+# License: MIT
+# Updated: 2024-07
+#
 # -*- mode: shell-script -*-
 
 set -euo pipefail
@@ -28,18 +35,31 @@ declare -A CONFIG=(
 
 DRY="n"
 FORCE="ask"
+TYPE=""
+USER_PATH=""
 
 usage() {
+  local name=${0##*/}
   cat <<EOF
-Usage: $(basename "$0") [OPTIONS]
-Install all the scripts in ./sh to the specified directory.
+Usage: $name [OPTIONS]
+Installs Diomeh's Script Utilities (dsu) on your system.
 
 Options:
-  -p, --path    Specify the installation path (default: /usr/local/bin)
-  -h, --help    Show this help message and exit
-
-Example:
-  $(basename "$0") -p ~/bin
+  -h, --help              Display this help message and exit
+  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
+  -f, --force <y/n/ask>   Interactive mode. If set to other than 'ask' -t is required. One of (ask by default):
+                            - y: Assume "yes" as the answer to all prompts and run non-interactively.
+                            - n: Assume "no" as the answer to all prompts and run non-interactively.
+                            - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
+  -t, --type <type>       Installation type. If -f is set, this option is required. One of:
+                            - rust: Install the Rust CLI binary
+                            - bash: Install the standalone bash scripts
+  -p, --path <path>       The path where the utilities will be installed. If -f is set, this option is required.
+  -l, --log <level>       Log level. One of (2 by default):
+                            - 0: Silent mode. No output
+                            - 1: Quiet mode. Only errors
+                            - 2: Log mode. Errors warnings and information. This is the default behavior.
+                            - 3: Verbose mode. Detailed information about the operations being performed.
 EOF
 }
 
@@ -52,17 +72,17 @@ log() {
       # Silent mode. No output
       ;;
     1)
-      if [ "$LOG" -ge $LOG_QUIET ]; then
+      if [[ "$LOG" -ge $LOG_QUIET ]]; then
         echo "$message"
       fi
       ;;
     2)
-      if [ "$LOG" -ge $LOG_NORMAL ]; then
+      if [[ "$LOG" -ge $LOG_NORMAL ]]; then
         echo "$message"
       fi
       ;;
     3)
-      if [ "$LOG" -ge $LOG_VERBOSE ]; then
+      if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
         echo "$message"
       fi
       ;;
@@ -128,6 +148,27 @@ arg_parse() {
 
         shift 2
         ;;
+      -t | --type)
+        TYPE="$2"
+
+        if [[ ! $TYPE =~ ^(rust|bash)$ ]]; then
+          log $LOG_QUIET "[ERROR] Invalid installation type: $TYPE" >&2
+          exit 1
+        fi
+
+        # 1 for rust, 2 for bash
+        if [[ "$TYPE" == "rust" ]]; then
+          TYPE=1
+        else
+          TYPE=2
+        fi
+
+        shift 2
+        ;;
+      -p | --path)
+        USER_PATH="$2"
+        shift 2
+        ;;
       -*)
         log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
         usage
@@ -144,59 +185,17 @@ arg_parse() {
   # Will only happen when on verbose mode
   log $LOG_VERBOSE "[INFO] Running verbose log level"
 
-  if [ "$FORCE" == "y" ]; then
+  if [[ "$FORCE" == "y" ]]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-  elif [ "$FORCE" == "n" ]; then
+  elif [[ "$FORCE" == "n" ]]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
   else
     log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
   fi
 
-  if [ $DRY == "y" ]; then
+  if [[ $DRY == "y" ]]; then
     log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
   fi
-}
-
-do_install() {
-  local error=""
-
-  while true; do
-    clear
-    read -d'' -r -n1 -p 'Welcome to the dsu'\''s installer!
-
-Currently, there are two implementations of the utilities:
-.- Rust CLI: A command-line interface written in Rust that bundles all the utilities in one place.
-.- Bash individual scripts: Each script is a standalone utility that can be used independently.
-
-Both implementations are kept up-to-date and have the same features. The choice is yours!
-
-Please select the installation method:
-  1. Rust CLI
-  2. Bash individual scripts
-  q. Abort and exit
-'"$error"'Option: '
-    echo ""
-
-    case "$REPLY" in
-      1)
-        CONFIG["type"]="rust"
-        install_rust_cli
-        break
-        ;;
-      2)
-        CONFIG["type"]="bash"
-        install_bash_scripts
-        break
-        ;;
-      q)
-        echo "Aborting..."
-        exit 0
-        ;;
-      *)
-        error="Invalid choice: $REPLY. "
-        ;;
-    esac
-  done
 }
 
 path_needs_sudo() {
@@ -204,18 +203,18 @@ path_needs_sudo() {
 
   while true; do
     # Safeguard, prevent infinite loop
-    if [ -z "$path" ]; then
-      echo "Error: provided path is not valid: $1" >&2
+    if [[ -z "$path" ]]; then
+      log $LOG_QUIET "[ERROR] Provided path is not valid: $1" >&2
       exit 1
     fi
-    if [ "$path" == "/" ]; then
+    if [[ "$path" == "/" ]]; then
       echo "y"
       break
     fi
 
     # if exists, check write permissions
-    if [ -e "$path" ]; then
-      if [ -w "$path" ]; then
+    if [[ -e "$path" ]]; then
+      if [[ -w "$path" ]]; then
         echo "n"
         break
       else
@@ -230,8 +229,60 @@ path_needs_sudo() {
   done
 }
 
+prompt_for_sudo() {
+  if [[ $FORCE == "y" ]]; then
+    log $LOG_VERBOSE "[INFO] Elevating permissions to continue installation."
+  elif [[ $FORCE == "n" ]]; then
+    log $LOG_NORMAL "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
+    exit 0
+  else
+    # Elevate permissions? Prompt the user
+    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      log $LOG_NORMAL "[INFO] Aborting..."
+      exit 0
+    fi
+  fi
+
+  # Elevate permissions
+  sudo -v || {
+    log $LOG_QUIET "[ERROR] Failed to elevate permissions. Exiting..." >&2
+    exit 1
+  }
+}
+
+get_sudo_command() {
+  local path="$1"
+  local use_sudo
+  local sudo_command=""
+  local status
+
+  use_sudo="$(path_needs_sudo "$path")"
+  status=$?
+
+  if ((status != 0)); then
+    log $LOG_QUIET "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
+    exit 1
+  fi
+
+  if [[ "$use_sudo" == "y" ]]; then
+    sudo_command="sudo"
+    prompt_for_sudo
+  fi
+
+  echo "$sudo_command"
+}
+
 set_install_path() {
   local error=""
+
+  # If path is provided, use it
+  if [[ -n "$USER_PATH" ]]; then
+    INSTALL_DIR="$USER_PATH"
+    CONFIG["path"]="$INSTALL_DIR"
+    return
+  fi
 
   while true; do
     clear
@@ -272,7 +323,7 @@ set_install_path() {
     esac
   done
 
-  if [ -z "$INSTALL_DIR" ]; then
+  if [[ -z "$INSTALL_DIR" ]]; then
     echo "Error: installation path not set." >&2
     exit 1
   fi
@@ -280,118 +331,89 @@ set_install_path() {
   CONFIG["path"]="$INSTALL_DIR"
 }
 
-write_to_conf() {
-  local key="$1"
-  local value="${2:-}"
-
-  if [ -z "$value" ]; then
-    echo "$key" >>"$CONFIG_FILE"
-  else
-    echo "$key=$value" >>"$CONFIG_FILE"
-  fi
-}
-
-init_config() {
-  echo "Writing configuration file..."
-  mkdir -p "$CONFIG_PATH"
-  rm "$CONFIG_FILE"
-  touch "$CONFIG_FILE"
-
-  write_to_conf "# Configuration file for dsu"
-  write_to_conf "# This file is used to store the installation path and other settings"
-  write_to_conf "# Do not modify this file unless you know what you are doing"
-  write_to_conf ""
-  write_to_conf "type" "${CONFIG["type"]}"
-  write_to_conf "path" "${CONFIG["path"]}"
-  write_to_conf "binaries="
-  for binary in "${CONFIG_BINARIES[@]}"; do
-    write_to_conf "    $binary"
-  done
-}
-
 build_rust_cli() {
+  log $LOG_VERBOSE "[INFO] Building Rust CLI binary..."
+  log $LOG_VERBOSE "[INFO] Checking for cargo..."
+
   # Cargo installed?
   if ! command -v cargo &>/dev/null; then
-    echo "Rust CLI binary not found and Cargo is not installed."
-    echo "For information on how to install cargo, refer to https://doc.rust-lang.org/cargo/getting-started/installation.html"
+    log $LOG_NORMAL "[WARN] Rust CLI binary not found and Cargo is not installed." >&2
+    log $LOG_NORMAL "[WARN] For information on how to install cargo, refer to https://doc.rust-lang.org/cargo/getting-started/installation.html" >&2
+    log $LOG_NORMAL "[WARN] Aborting..." >&2
     exit 1
   fi
 
-  # Prompt for user confirmation
-  read -p "Rust CLI binary not found. Do you want to build it now? [y/N] " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborting..."
-    exit 0
-  fi
+  log $LOG_VERBOSE "[INFO] Cargo found!"
 
-  # Attempt to build the binary
-  # Write output to log file
-  echo "Building CLI binary..."
-  cargo build --release >"$DSU_LOG_FILE)" 2>&1 || {
-    echo "Failed to build Rust CLI binary." >&2
-    echo "Check the log file for more information: $DSU_LOG_FILE" >&2
-    echo "Last 10 lines of log file:" >&2
-    tail "$DSU_LOG_FILE" >&2
+  if [[ $FORCE == "n" ]]; then
+    log $LOG_NORMAL "[WARN] Rust CLI binary not found. Aborting..." >&2
     exit 1
-  }
-}
-
-install_rust_cli() {
-  local use_sudo
-  local sudo_command=""
-
-  clear
-  set_install_path
-  echo "Installing Rust CLI binary..."
-
-  # Do we have the dsu binary?
-  if [ ! -e "$CLI_SRC_PATH" ]; then
-    build_rust_cli
-  fi
-
-  use_sudo="$(path_needs_sudo "$INSTALL_DIR")"
-
-  # Do we have write permissions?
-  if [ "$use_sudo" == "y" ]; then
-    sudo_command="sudo"
-
-    echo "Permission denied: $INSTALL_DIR" >&2
-
-    # Elevate permissions? Prompt the user
-    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
+  elif [[ $FORCE == "ask" ]]; then
+    # Prompt for user confirmation
+    read -p "Rust CLI binary not found. Do you want to build it now? [y/N] " -n 1 -r
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting..."
+      log $LOG_NORMAL "[INFO] Aborting..."
       exit 0
     fi
   fi
 
-  # Attempt to install
-  $sudo_command mkdir -p "$INSTALL_DIR" || {
-    echo "Could not create installation directory: $INSTALL_DIR" >&2
+  log $LOG_VERBOSE "[INFO] Running cargo build..."
+
+  # Attempt to build the binary. Write output to log file
+  cargo build --release >"$DSU_LOG_FILE" 2>&1 || {
+    log $LOG_QUIET "[ERROR] Failed to build Rust CLI binary." >&2
+    log $LOG_QUIET "[INFO] Check the log file for more information: $DSU_LOG_FILE" >&2
+    log $LOG_QUIET "[INFO] For more information check log file: $DSU_LOG_FILE" >&2
+    tail "$DSU_LOG_FILE" >&2
     exit 1
   }
+
+  log $LOG_VERBOSE "[INFO] Rust CLI binary built successfully!"
+}
+
+install_rust_cli() {
+  CONFIG["type"]="rust"
+
+  local sudo_command=""
+
+  set_install_path
+  log $LOG_NORMAL "[INFO] Installing Rust CLI binary..."
+
+  # Do we have the dsu binary?
+  if [[ ! -e "$CLI_SRC_PATH" ]]; then
+    build_rust_cli
+  fi
+
+  sudo_command="$(get_sudo_command "$INSTALL_DIR" | tail -n 1)"
+
+  log $LOG_VERBOSE "[INFO] Creating installation directory: $INSTALL_DIR"
+
+  $sudo_command mkdir -p "$INSTALL_DIR" || {
+    log $LOG_QUIET "Could not create installation directory: $INSTALL_DIR" >&2
+    exit 1
+  }
+
+  log $LOG_QUIET "[INFO] Installing binary to installation directory: $INSTALL_DIR"
 
   $sudo_command install -m 755 "$CLI_SRC_PATH" "$INSTALL_DIR" || {
     echo "Failed to install binary to installation directory: $INSTALL_DIR" >&2
     exit 1
   }
 
-  CONFIG_BINARIES+=("$(basename "$CLI_SRC_PATH")")
-
-  echo "Rust CLI binary installed successfully to: $INSTALL_DIR"
+  CONFIG_BINARIES+=("${CLI_SRC_PATH##*/}")
+  log $LOG_NORMAL "[INFO] Binary installed successfully to: $INSTALL_DIR"
 }
 
 build_bash_scripts() {
   # Attempt to build the tarball
   # Write output to log file
-  echo "Bash scripts tarball not found. Building..."
+  log $LOG_NORMAL "[WARN] Bash scripts tarball not found. Building..."
 
   ./build.sh >"$DSU_LOG_FILE" 2>&1 || {
-    echo "Failed to build Bash scripts tarball." >&2
-    echo "Check the log file for more information: $DSU_LOG_FILE" >&2
-    echo "Last 10 lines of log file:" >&2
+    log $LOG_QUIET "[ERROR] Failed to build Bash scripts tarball." >&2
+    log $LOG_NORMAL "[WARN] Check the log file for more information: $DSU_LOG_FILE" >&2
+    log $LOG_NORMAL "[WARN] Last 10 lines of log file:" >&2
     tail "$DSU_LOG_FILE" >&2
     exit 1
   }
@@ -403,7 +425,7 @@ bash_tarball_to_tmp() {
 
   # Extract the tarball to the temporary directory
   tar -xzf "$tarball" -C "$tmp_dir" || {
-    echo "Failed to extract tarball to temporary directory: $tmp_dir" >&2
+    log $LOG_QUIET "[ERROR] Failed to extract tarball to temporary directory: $tmp_dir" >&2
     exit 1
   }
 
@@ -413,67 +435,54 @@ bash_tarball_to_tmp() {
 }
 
 install_bash_scripts() {
+  CONFIG["type"]="bash"
+
   local tarball tmp_dir use_sudo
   local sudo_command=""
 
-  clear
   set_install_path
-  echo "Installing standalone bash scripts..."
+  log $LOG_NORMAL "[INFO] Installing standalone bash scripts..."
 
   # Do we have the tarball with the scripts?
   # Filename should be dsu-vx.y.z.tar.gz (semver schema)
   tarball="$BASH_SRC_DIR/dsu-$(cat VERSION).tar.gz"
 
-  if [ ! -e "$tarball" ]; then
+  if [[ ! -e "$tarball" ]]; then
     build_bash_scripts
   fi
 
   tmp_dir=$(bash_tarball_to_tmp)
-  use_sudo="$(path_needs_sudo "$INSTALL_DIR")"
+  log $LOG_VERBOSE "[INFO] Extracted tarball to temporary directory: $tmp_dir"
+  sudo_command="$(get_sudo_command "$INSTALL_DIR" | tail -n 1)"
 
-  # Do we have write permissions?
-  if [ "$use_sudo" == "y" ]; then
-    sudo_command="sudo"
-
-    echo "Permission denied: $INSTALL_DIR" >&2
-
-    # Elevate permissions? Prompt the user
-    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting..."
-      exit 0
-    fi
-  fi
-
-  # Attempt to install
+  log $LOG_VERBOSE "[INFO] Creating installation directory: $INSTALL_DIR"
   $sudo_command mkdir -p "$INSTALL_DIR" || {
-    echo "Could not create installation directory: $INSTALL_DIR" >&2
+    log $LOG_QUIET "[ERROR] Could not create installation directory: $INSTALL_DIR" >&2
     exit 1
   }
 
-  # Attempt to install the files
+  log $LOG_VERBOSE "[INFO] Installing bash scripts to installation directory: $INSTALL_DIR"
   for file in "$tmp_dir"/*; do
+    log $LOG_VERBOSE "[INFO] Installing file: ${file##*/}"
     $sudo_command install -m 755 "$file" "$INSTALL_DIR" || {
-      echo "Failed to install file to installation directory: $INSTALL_DIR" >&2
+      log $LOG_QUIET "[ERROR] Failed to install file to installation directory: $INSTALL_DIR" >&2
       exit 1
     }
 
-    CONFIG_BINARIES+=("$(basename "$file")")
+    CONFIG_BINARIES+=("${file##*/}")
   done
 
   # Clean up the temporary directory
+  log $LOG_VERBOSE "[INFO] Cleaning up temporary directory: $tmp_dir"
   rm -rf "$tmp_dir"
 
-  echo "Bash scripts installed successfully to: $INSTALL_DIR"
+  log $LOG_NORMAL "[INFO] Bash scripts installed successfully to: $INSTALL_DIR"
 }
 
 remove_previous_install() {
+  local binaries=()
   local type=""
   local path=""
-  local binaries=()
-
-  local use_sudo
   local sudo_command=""
 
   # Read the config file
@@ -488,73 +497,149 @@ remove_previous_install() {
     elif [[ "$line" =~ ^path= ]]; then
       path="${line#*=}"
     elif [[ "$line" =~ ^[[:space:]] ]]; then
-      binaries+=("${line// /}")
+      binaries+=("${line//[[:space:]]/}")
     fi
   done <"$CONFIG_FILE"
 
-  echo "Removing existing $type installation from $path..."
-
-  use_sudo="$(path_needs_sudo "$path")"
-  if [ "$use_sudo" == "y" ]; then
-    sudo_command="sudo"
-
-    echo "Permission denied: $path" >&2
-
-    # Elevate permissions? Prompt the user
-    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting..."
-      exit 0
-    fi
+  if [[ -z "$type" ]] || [[ -z "$path" ]]; then
+    log $LOG_QUIET "[ERROR] Invalid configuration file: $CONFIG_FILE" >&2
+    exit 1
   fi
 
+  log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+
+  sudo_command="$(get_sudo_command "$path" | tail -n 1)"
   for binary in "${binaries[@]}"; do
+    log $LOG_VERBOSE "[INFO] Removing binary: $path/$binary"
     $sudo_command rm -f "$path/$binary" || {
-      echo "Failed to remove binary: $path/$binary" >&2
+      log $LOG_QUIET "[ERROR] Failed to remove binary: $path/$binary" >&2
       exit 1
     }
   done
 
+  log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
   rm "$CONFIG_FILE"
 }
 
 pre_install() {
   # Check for previous installation
-  if [ ! -e "$CONFIG_FILE" ]; then
+  if [[ ! -e "$CONFIG_FILE" ]]; then
     return
   fi
 
-  echo "Looks like dsu is already installed. Proceeding will remove the existing installation."
-  read -p "Do you want to continue? [y/N] " -n 1 -r
-  echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborting..."
+  if [[ $FORCE == "y" ]]; then
+    log $LOG_NORMAL "[INFO] Previous installation found. Removing..."
+    remove_previous_install
+  elif [[ $FORCE == "n" ]]; then
+    log $LOG_QUIET "Previous installation found. Exiting..."
     exit 0
+  else
+    echo "Looks like dsu is already installed. Proceeding will remove the existing installation."
+    read -p "Do you want to continue? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Aborting..."
+      exit 0
+    fi
+
+    remove_previous_install
+  fi
+}
+
+do_install() {
+  # Skip the prompt if either force mode is set or install type is provided
+  if [[ $FORCE != "ask" ]] || [[ $TYPE != 0 ]]; then
+    case "$TYPE" in
+      1) install_rust_cli ;;
+      2) install_bash_scripts ;;
+      *) log $LOG_QUIET "[ERROR] Invalid installation type: $TYPE." >&2 ;;
+    esac
+    return
   fi
 
-  remove_previous_install
+  local error
+  while true; do
+    clear
+    read -d'' -r -n1 -p 'Welcome to the dsu'\''s installer!
+
+Currently, there are two implementations of the utilities:
+.- Rust CLI: A command-line interface written in Rust that bundles all the utilities in one place.
+.- Bash individual scripts: Each script is a standalone utility that can be used independently.
+
+Both implementations are kept up-to-date and have the same features. The choice is yours!
+
+Please select the installation method:
+  1. Rust CLI
+  2. Bash individual scripts
+  q. Abort and exit
+'"$error"'Option: '
+    echo ""
+
+    case "$REPLY" in
+      1)
+        install_rust_cli
+        break
+        ;;
+      2)
+        install_bash_scripts
+        break
+        ;;
+      q) echo "Aborting..." exit 0 ;;
+      *) error="Invalid choice: $REPLY. " ;;
+    esac
+  done
+}
+
+write_to_conf() {
+  local key="$1"
+  local value="${2:-}"
+
+  if [[ -z "$value" ]]; then
+    echo "$key" >>"$CONFIG_FILE"
+  else
+    echo "$key=$value" >>"$CONFIG_FILE"
+  fi
+}
+
+init_config() {
+  log $LOG_NORMAL "[INFO] Writing configuration file..."
+  log $LOG_VERBOSE "[INFO] Creating configuration directory: $CONFIG_PATH"
+
+  mkdir -p "$CONFIG_PATH"
+  rm "$CONFIG_FILE" 2>/dev/null || true
+  touch "$CONFIG_FILE"
+
+  write_to_conf "# Configuration file for dsu"
+  write_to_conf "# This file is used to store the installation path and other settings"
+  write_to_conf "# Do not modify this file unless you know what you are doing"
+  write_to_conf ""
+  write_to_conf "type" "${CONFIG["type"]}"
+  write_to_conf "path" "${CONFIG["path"]}"
+  write_to_conf "binaries="
+  for binary in "${CONFIG_BINARIES[@]}"; do
+    write_to_conf "    $binary"
+  done
 }
 
 post_install() {
   local reject_msg
+  local shell_config_file
 
-  echo "Installation complete!"
+  log $LOG_NORMAL "[INFO] Installation complete!"
 
   # shellcheck disable=SC2016
-  reject_msg='Please make sure to add the installation path to your PATH environment variable.
-For example, add the following line to your shell configuration file:
-  export PATH="$PATH:'"$INSTALL_DIR"'"
-'
+  reject_msg='[INFO] Please make sure to add the installation path to your PATH environment variable.
+[INFO] For example, add the following line to your shell configuration file:
+  export PATH="$PATH:'"$INSTALL_DIR"'"'
 
+  log $LOG_VERBOSE "[INFO] Checking if installation path is in PATH environment variable..."
   for path in $(echo "$PATH" | tr ':' '\n' | sort | uniq); do
-    if [ "$path" == "$INSTALL_DIR" ]; then
+    if [[ "$path" == "$INSTALL_DIR" ]]; then
       return
     fi
   done
 
-  local shell_config_file
-
+  log $LOG_VERBOSE "[INFO] Installation path not found in PATH environment variable."
   case "$SHELL" in
     */bash)
       shell_config_file="$HOME/.bashrc"
@@ -567,23 +652,29 @@ For example, add the following line to your shell configuration file:
       ;;
   esac
 
-  if [ ! -w "$shell_config_file" ]; then
+  if [[ ! -w "$shell_config_file" ]]; then
     echo "$reject_msg"
   else
-    # Prompt the user to add the installation path to the PATH environment variable
-    echo "Installation path not found in PATH environment variable."
-    read -p "Do you want to add it now? [y/N] " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $FORCE == "y" ]]; then
       echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >>"$shell_config_file"
-      echo "Installation path added to PATH environment variable."
-    else
+      log $LOG_NORMAL "[INFO] Installation path added to PATH environment variable."
+    elif [[ $FORCE == "n" ]]; then
       echo "$reject_msg"
+    else
+      # Prompt the user to add the installation path to the PATH environment variable
+      read -p "Do you want to add it now? [y/N] " -n 1 -r
+      echo ""
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >>"$shell_config_file"
+        log $LOG_NORMAL "[INFO] Installation path added to PATH environment variable."
+      else
+        echo "$reject_msg"
+      fi
     fi
   fi
 
-  echo "Do not forget to source your shell configuration file to apply the changes."
-  echo "source $shell_config_file"
+  log $LOG_NORMAL "[INFO] Do not forget to source your shell configuration file to apply the changes."
+  echo "    source $shell_config_file"
 }
 
 main() {

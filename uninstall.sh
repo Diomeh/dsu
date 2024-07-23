@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 #
+# Uninstaller for DSU shell utilities
+#
+# Author: David Urbina (davidurbina.dev@gmail.com)
+# Date: 2022-02
+# License: MIT
+# Updated: 2024-07
+#
 # -*- mode: shell-script -*-
 
 set -euo pipefail
@@ -19,8 +26,9 @@ DRY="n"
 FORCE="ask"
 
 usage() {
+  local name=${0##*/}
     cat << EOF
-Usage: $(basename "$0") [OPTIONS]
+Usage: $name [OPTIONS]
 
 Removes the installed binaries and configuration files of the Diomeh's Script Utilities.
 
@@ -48,17 +56,17 @@ log() {
       # Silent mode. No output
       ;;
     1)
-      if [ "$LOG" -ge $LOG_QUIET ]; then
+      if [[ "$LOG" -ge $LOG_QUIET ]]; then
         echo "$message"
       fi
       ;;
     2)
-      if [ "$LOG" -ge $LOG_NORMAL ]; then
+      if [[ "$LOG" -ge $LOG_NORMAL ]]; then
         echo "$message"
       fi
       ;;
     3)
-      if [ "$LOG" -ge $LOG_VERBOSE ]; then
+      if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
         echo "$message"
       fi
       ;;
@@ -140,15 +148,15 @@ arg_parse() {
   # Will only happen when on verbose mode
   log $LOG_VERBOSE "[INFO] Running verbose log level"
 
-  if [ "$FORCE" == "y" ]; then
+  if [[ "$FORCE" == "y" ]]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-  elif [ "$FORCE" == "n" ]; then
+  elif [[ "$FORCE" == "n" ]]; then
     log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
   else
     log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
   fi
 
-  if [ $DRY == "y" ]; then
+  if [[ $DRY == "y" ]]; then
     log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
   fi
 }
@@ -158,18 +166,18 @@ path_needs_sudo() {
 
   while true; do
     # Safeguard, prevent infinite loop
-    if [ -z "$path" ]; then
-      echo "Error: provided path is not valid: $1" >&2
+    if [[ -z "$path" ]]; then
+      log $LOG_QUIET "[ERROR] Provided path is not valid: $1" >&2
       exit 1
     fi
-    if [ "$path" == "/" ]; then
+    if [[ "$path" == "/" ]]; then
       echo "y"
       break
     fi
 
     # if exists, check write permissions
-    if [ -e "$path" ]; then
-      if [ -w "$path" ]; then
+    if [[ -e "$path" ]]; then
+      if [[ -w "$path" ]]; then
         echo "n"
         break
       else
@@ -184,20 +192,63 @@ path_needs_sudo() {
   done
 }
 
-main() {
-  arg_parse "$@"
-
-  if [ ! -e "$CONFIG_FILE" ]; then
-    echo "Nothing to uninstall. Configuration file not found: $CONFIG_FILE"
+prompt_for_sudo() {
+  if [[ $FORCE == "y" ]]; then
+    log $LOG_VERBOSE "[INFO] Elevating permissions to continue installation."
+  elif [[ $FORCE == "n" ]]; then
+    log $LOG_NORMAL "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
     exit 0
+  else
+    # Elevate permissions? Prompt the user
+    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      log $LOG_NORMAL "[INFO] Aborting..."
+      exit 0
+    fi
   fi
 
-  local type=""
-  local path=""
-  local binaries=()
+  # Elevate permissions
+  sudo -v || {
+    log $LOG_QUIET "[ERROR] Failed to elevate permissions. Exiting..." >&2
+    exit 1
+  }
+}
 
+get_sudo_command() {
+  local path="$1"
   local use_sudo
   local sudo_command=""
+  local status
+
+  use_sudo="$(path_needs_sudo "$path")"
+  status=$?
+
+  if ((status != 0)); then
+    log $LOG_QUIET "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
+    exit 1
+  fi
+
+  if [[ "$use_sudo" == "y" ]]; then
+    sudo_command="sudo"
+    prompt_for_sudo
+  fi
+
+  echo "$sudo_command"
+}
+
+main() {
+  local binaries=()
+  local type=""
+  local path=""
+  local sudo_command=""
+
+  arg_parse "$@"
+
+  if [[ ! -e "$CONFIG_FILE" ]]; then
+    log $LOG_NORMAL "[INFO] Nothing to uninstall. Configuration file not found: $CONFIG_FILE"
+    exit 0
+  fi
 
   # Read the config file
   while IFS= read -r line; do
@@ -211,37 +262,36 @@ main() {
     elif [[ "$line" =~ ^path= ]]; then
       path="${line#*=}"
     elif [[ "$line" =~ ^[[:space:]] ]]; then
-      binaries+=("${line// /}")
+      binaries+=("${line//[[:space:]]/}")
     fi
   done <"$CONFIG_FILE"
 
-  echo "Removing existing $type installation from $path..."
-
-  use_sudo="$(path_needs_sudo "$path")"
-  if [ "$use_sudo" == "y" ]; then
-    sudo_command="sudo"
-
-    echo "Permission denied: $path" >&2
-
-    # Elevate permissions? Prompt the user
-    read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting..."
-      exit 0
-    fi
+  if [[ -z "$type" ]] || [[ -z "$path" ]]; then
+    log $LOG_QUIET "[ERROR] Invalid configuration file: $CONFIG_FILE" >&2
+    exit 1
   fi
 
+  log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+
+  sudo_command="$(get_sudo_command "$path" | tail -n 1)"
   for binary in "${binaries[@]}"; do
+    log $LOG_VERBOSE "[INFO] Removing binary: $path/$binary"
     $sudo_command rm -f "$path/$binary" || {
-      echo "Failed to remove binary: $path/$binary" >&2
+      log $LOG_QUIET "[ERROR] Failed to remove binary: $path/$binary" >&2
       exit 1
     }
   done
 
+  log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
   rm "$CONFIG_FILE"
+
+  log $LOG_VERBOSE "[INFO] Removing log file: $LOG_FILE"
   rm "$LOG_FILE"
+
+  log $LOG_VERBOSE "[INFO] Removing configuration directory: $CONFIG_PATH"
   rmdir "$CONFIG_PATH"
+
+  log $LOG_NORMAL "[INFO] Uninstallation completed successfully."
 }
 
 main "$@"
