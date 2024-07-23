@@ -35,8 +35,9 @@ declare -A CONFIG=(
 
 DRY="n"
 FORCE="ask"
-TYPE=""
+TYPE="0"
 USER_PATH=""
+SUDO_COMMAND=""
 
 usage() {
   local name=${0##*/}
@@ -252,10 +253,9 @@ prompt_for_sudo() {
   }
 }
 
-get_sudo_command() {
+set_sudo_command() {
   local path="$1"
   local use_sudo
-  local sudo_command=""
   local status
 
   use_sudo="$(path_needs_sudo "$path")"
@@ -267,11 +267,13 @@ get_sudo_command() {
   fi
 
   if [[ "$use_sudo" == "y" ]]; then
-    sudo_command="sudo"
-    prompt_for_sudo
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would use sudo to remove binaries from $path"
+    else
+      SUDO_COMMAND="sudo"
+      prompt_for_sudo
+    fi
   fi
-
-  echo "$sudo_command"
 }
 
 set_install_path() {
@@ -279,59 +281,78 @@ set_install_path() {
 
   # If path is provided, use it
   if [[ -n "$USER_PATH" ]]; then
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would use provided path: $USER_PATH"
+    else
+      log $LOG_VERBOSE "[INFO] Using provided installation path: $USER_PATH"
+    fi
     INSTALL_DIR="$USER_PATH"
     CONFIG["path"]="$INSTALL_DIR"
     return
   fi
 
-  while true; do
-    clear
-    read -d'' -r -n1 -p 'Where do you want to install the utilities?
+  if [[ $FORCE == "ask" ]]; then
+    while true; do
+      clear
+      read -d'' -r -n1 -p 'Where do you want to install the utilities?
   1. Default multi user path (/usr/local/bin)
   2. Multi user path (/opt/dsu)
   3. Single user path ('"$HOME"'/bin)
   4. Custom path
   q. Abort and exit
 '"$error"'Option: '
-    echo ""
+      echo ""
 
-    case "$REPLY" in
-      1)
-        INSTALL_DIR="/usr/local/bin"
-        break
-        ;;
-      2)
-        INSTALL_DIR="/opt/dsu"
-        break
-        ;;
-      3)
-        INSTALL_DIR="$HOME/bin"
-        break
-        ;;
-      4)
-        read -r -p "Enter the custom path: " -e
-        INSTALL_DIR="$REPLY"
-        break
-        ;;
-      q)
-        echo "Aborting..."
-        exit 0
-        ;;
-      *)
-        error="Invalid choice: $REPLY. "
-        ;;
-    esac
-  done
+      case "$REPLY" in
+        1)
+          INSTALL_DIR="/usr/local/bin"
+          break
+          ;;
+        2)
+          INSTALL_DIR="/opt/dsu"
+          break
+          ;;
+        3)
+          INSTALL_DIR="$HOME/bin"
+          break
+          ;;
+        4)
+          read -r -p "Enter the custom path: " -e
+          INSTALL_DIR="$REPLY"
+          break
+          ;;
+        q)
+          echo "Aborting..."
+          exit 0
+          ;;
+        *)
+          error="Invalid choice: $REPLY. "
+          ;;
+      esac
+    done
+  else
+    INSTALL_DIR="/usr/local/bin"
+    log $LOG_VERBOSE "[INFO] Using default installation path: $INSTALL_DIR"
+  fi
 
   if [[ -z "$INSTALL_DIR" ]]; then
-    echo "Error: installation path not set." >&2
+    log $LOG_QUIET "[ERROR] installation path not set." >&2
     exit 1
+  fi
+
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would use installation path: $INSTALL_DIR"
   fi
 
   CONFIG["path"]="$INSTALL_DIR"
 }
 
 build_rust_cli() {
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would build Rust CLI binary"
+    return
+  fi
+
   log $LOG_VERBOSE "[INFO] Building Rust CLI binary..."
   log $LOG_VERBOSE "[INFO] Checking for cargo..."
 
@@ -375,8 +396,6 @@ build_rust_cli() {
 install_rust_cli() {
   CONFIG["type"]="rust"
 
-  local sudo_command=""
-
   set_install_path
   log $LOG_NORMAL "[INFO] Installing Rust CLI binary..."
 
@@ -385,18 +404,23 @@ install_rust_cli() {
     build_rust_cli
   fi
 
-  sudo_command="$(get_sudo_command "$INSTALL_DIR" | tail -n 1)"
+  set_sudo_command "$INSTALL_DIR"
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would create installation directory: $INSTALL_DIR"
+    log $LOG_NORMAL "[DRY] Would install binary to installation directory: $INSTALL_DIR"
+    return
+  fi
 
   log $LOG_VERBOSE "[INFO] Creating installation directory: $INSTALL_DIR"
 
-  $sudo_command mkdir -p "$INSTALL_DIR" || {
+  $SUDO_COMMAND mkdir -p "$INSTALL_DIR" || {
     log $LOG_QUIET "Could not create installation directory: $INSTALL_DIR" >&2
     exit 1
   }
 
   log $LOG_QUIET "[INFO] Installing binary to installation directory: $INSTALL_DIR"
 
-  $sudo_command install -m 755 "$CLI_SRC_PATH" "$INSTALL_DIR" || {
+  $SUDO_COMMAND install -m 755 "$CLI_SRC_PATH" "$INSTALL_DIR" || {
     echo "Failed to install binary to installation directory: $INSTALL_DIR" >&2
     exit 1
   }
@@ -406,6 +430,11 @@ install_rust_cli() {
 }
 
 build_bash_scripts() {
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would build Bash scripts tarball"
+    return
+  fi
+
   # Attempt to build the tarball
   # Write output to log file
   log $LOG_NORMAL "[WARN] Bash scripts tarball not found. Building..."
@@ -421,6 +450,12 @@ build_bash_scripts() {
 
 bash_tarball_to_tmp() {
   local tmp_dir
+
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would extract tarball to temporary directory"
+    return
+  fi
+
   tmp_dir=$(mktemp -d)
 
   # Extract the tarball to the temporary directory
@@ -438,10 +473,14 @@ install_bash_scripts() {
   CONFIG["type"]="bash"
 
   local tarball tmp_dir use_sudo
-  local sudo_command=""
 
   set_install_path
-  log $LOG_NORMAL "[INFO] Installing standalone bash scripts..."
+
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would install standalone bash scripts"
+  else
+    log $LOG_NORMAL "[INFO] Installing standalone bash scripts..."
+  fi
 
   # Do we have the tarball with the scripts?
   # Filename should be dsu-vx.y.z.tar.gz (semver schema)
@@ -452,11 +491,22 @@ install_bash_scripts() {
   fi
 
   tmp_dir=$(bash_tarball_to_tmp)
-  log $LOG_VERBOSE "[INFO] Extracted tarball to temporary directory: $tmp_dir"
-  sudo_command="$(get_sudo_command "$INSTALL_DIR" | tail -n 1)"
+
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would extract tarball to temporary directory"
+  else
+    log $LOG_VERBOSE "[INFO] Extracted tarball to temporary directory: $tmp_dir"
+  fi
+
+  set_sudo_command "$INSTALL_DIR"
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would create installation directory: $INSTALL_DIR"
+    log $LOG_NORMAL "[DRY] Would install bash scripts to installation directory: $INSTALL_DIR"
+    return
+  fi
 
   log $LOG_VERBOSE "[INFO] Creating installation directory: $INSTALL_DIR"
-  $sudo_command mkdir -p "$INSTALL_DIR" || {
+  $SUDO_COMMAND mkdir -p "$INSTALL_DIR" || {
     log $LOG_QUIET "[ERROR] Could not create installation directory: $INSTALL_DIR" >&2
     exit 1
   }
@@ -464,7 +514,7 @@ install_bash_scripts() {
   log $LOG_VERBOSE "[INFO] Installing bash scripts to installation directory: $INSTALL_DIR"
   for file in "$tmp_dir"/*; do
     log $LOG_VERBOSE "[INFO] Installing file: ${file##*/}"
-    $sudo_command install -m 755 "$file" "$INSTALL_DIR" || {
+    $SUDO_COMMAND install -m 755 "$file" "$INSTALL_DIR" || {
       log $LOG_QUIET "[ERROR] Failed to install file to installation directory: $INSTALL_DIR" >&2
       exit 1
     }
@@ -483,7 +533,6 @@ remove_previous_install() {
   local binaries=()
   local type=""
   local path=""
-  local sudo_command=""
 
   # Read the config file
   while IFS= read -r line; do
@@ -506,24 +555,48 @@ remove_previous_install() {
     exit 1
   fi
 
-  log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would remove existing $type installation from $path"
+  else
+    log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+  fi
 
-  sudo_command="$(get_sudo_command "$path" | tail -n 1)"
+  set_sudo_command "$path"
   for binary in "${binaries[@]}"; do
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would remove binary: $path/$binary"
+      continue
+    fi
+
     log $LOG_VERBOSE "[INFO] Removing binary: $path/$binary"
-    $sudo_command rm -f "$path/$binary" || {
+    $SUDO_COMMAND rm -f "$path/$binary" || {
       log $LOG_QUIET "[ERROR] Failed to remove binary: $path/$binary" >&2
       exit 1
     }
   done
 
-  log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
-  rm "$CONFIG_FILE"
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would remove configuration file: $CONFIG_FILE"
+    log $LOG_NORMAL "[DRY] Would remove log file: $DSU_LOG_FILE"
+    log $LOG_NORMAL "[DRY] Would remove configuration directory: $CONFIG_PATH"
+  else
+    log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
+    rm "$CONFIG_FILE" 2>/dev/null || true
+
+    log $LOG_VERBOSE "[INFO] Removing log file: $DSU_LOG_FILE"
+    rm "$DSU_LOG_FILE" 2>/dev/null || true
+
+    log $LOG_VERBOSE "[INFO] Removing configuration directory: $CONFIG_PATH"
+    rmdir "$CONFIG_PATH" 2>/dev/null || true
+
+    log $LOG_NORMAL "[INFO] Uninstallation completed successfully."
+  fi
 }
 
 pre_install() {
   # Check for previous installation
   if [[ ! -e "$CONFIG_FILE" ]]; then
+    log $LOG_NORMAL "[INFO] Nothing to uninstall. Configuration file not found: $CONFIG_FILE"
     return
   fi
 
@@ -557,7 +630,7 @@ do_install() {
     return
   fi
 
-  local error
+  local error=""
   while true; do
     clear
     read -d'' -r -n1 -p 'Welcome to the dsu'\''s installer!
@@ -602,6 +675,12 @@ write_to_conf() {
 }
 
 init_config() {
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would write configuration file"
+    log $LOG_NORMAL "[DRY] Would create configuration directory: $CONFIG_PATH"
+    return
+  fi
+
   log $LOG_NORMAL "[INFO] Writing configuration file..."
   log $LOG_VERBOSE "[INFO] Creating configuration directory: $CONFIG_PATH"
 
@@ -624,6 +703,11 @@ init_config() {
 post_install() {
   local reject_msg
   local shell_config_file
+
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would check if installation path is in PATH environment variable"
+    return
+  fi
 
   log $LOG_NORMAL "[INFO] Installation complete!"
 

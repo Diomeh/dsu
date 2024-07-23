@@ -25,9 +25,11 @@ LOG_FILE="$CONFIG_PATH/dsu.log"
 DRY="n"
 FORCE="ask"
 
+SUDO_COMMAND=""
+
 usage() {
   local name=${0##*/}
-    cat << EOF
+  cat <<EOF
 Usage: $name [OPTIONS]
 
 Removes the installed binaries and configuration files of the Diomeh's Script Utilities.
@@ -36,8 +38,8 @@ Options:
   -h, --help              Display this help message and exit
   -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
   -f, --force <y/n/ask>   Force mode. One of (ask by default):
-                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
-                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+                            - y: Assume "yes" as the answer to all prompts and run non-interactively.
+                            - n: Assume "no" as the answer to all prompts and run non-interactively.
                             - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
   -l, --log <level>       Log level. One of (2 by default):
                             - 0: Silent mode. No output
@@ -215,10 +217,9 @@ prompt_for_sudo() {
   }
 }
 
-get_sudo_command() {
+set_sudo_command() {
   local path="$1"
   local use_sudo
-  local sudo_command=""
   local status
 
   use_sudo="$(path_needs_sudo "$path")"
@@ -230,18 +231,19 @@ get_sudo_command() {
   fi
 
   if [[ "$use_sudo" == "y" ]]; then
-    sudo_command="sudo"
-    prompt_for_sudo
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would use sudo to remove binaries from $path"
+    else
+      SUDO_COMMAND="sudo"
+      prompt_for_sudo
+    fi
   fi
-
-  echo "$sudo_command"
 }
 
 main() {
   local binaries=()
   local type=""
   local path=""
-  local sudo_command=""
 
   arg_parse "$@"
 
@@ -271,27 +273,42 @@ main() {
     exit 1
   fi
 
-  log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would remove existing $type installation from $path"
+  else
+    log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+  fi
 
-  sudo_command="$(get_sudo_command "$path" | tail -n 1)"
+  set_sudo_command "$path"
   for binary in "${binaries[@]}"; do
+    if [[ $DRY == "y" ]]; then
+      log $LOG_NORMAL "[DRY] Would remove binary: $path/$binary"
+      continue
+    fi
+
     log $LOG_VERBOSE "[INFO] Removing binary: $path/$binary"
-    $sudo_command rm -f "$path/$binary" || {
+    $SUDO_COMMAND rm -f "$path/$binary" || {
       log $LOG_QUIET "[ERROR] Failed to remove binary: $path/$binary" >&2
       exit 1
     }
   done
 
-  log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
-  rm "$CONFIG_FILE"
+  if [[ $DRY == "y" ]]; then
+    log $LOG_NORMAL "[DRY] Would remove configuration file: $CONFIG_FILE"
+    log $LOG_NORMAL "[DRY] Would remove log file: $LOG_FILE"
+    log $LOG_NORMAL "[DRY] Would remove configuration directory: $CONFIG_PATH"
+  else
+    log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
+    rm "$CONFIG_FILE" 2>/dev/null || true
 
-  log $LOG_VERBOSE "[INFO] Removing log file: $LOG_FILE"
-  rm "$LOG_FILE"
+    log $LOG_VERBOSE "[INFO] Removing log file: $LOG_FILE"
+    rm "$LOG_FILE" 2>/dev/null || true
 
-  log $LOG_VERBOSE "[INFO] Removing configuration directory: $CONFIG_PATH"
-  rmdir "$CONFIG_PATH"
+    log $LOG_VERBOSE "[INFO] Removing configuration directory: $CONFIG_PATH"
+    rmdir "$CONFIG_PATH" 2>/dev/null || true
 
-  log $LOG_NORMAL "[INFO] Uninstallation completed successfully."
+    log $LOG_NORMAL "[INFO] Uninstallation completed successfully."
+  fi
 }
 
 main "$@"
