@@ -6,7 +6,7 @@ authors = ["David Urbina <davidurbina.dev@gmail.com>"]
 description = "Set of utilities bundled into a single CLI tool"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+1.30
 [dependencies]
 ambassador = "0.4.0"
 clap = { version = "4.5.7", features = ["derive"] }

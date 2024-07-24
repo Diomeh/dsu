@@ -13,7 +13,7 @@ set -uo pipefail
 
 # App data
 app=${0##*/}
-version="v2.1.30"
+version="v2.2.0"
 
 # Log levels
 log_silent=0
