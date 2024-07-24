@@ -17,17 +17,19 @@ version="v2.1.31"
 app=${0##*/}
 
 # Log levels
-#log_silent=0
-log_quiet=1
-log_normal=2
-log_verbose=3
+log_silent=0
+log_error=1
+log_warn=2
+log_dry=3
+log_info=4
+log_verbose=5
+log=$log_info
 
 # arguments and options
 dry="n"
 recurse="n"
 recurse_depth=""
 force="ask"
-log="2"
 
 # Paths to process
 paths=()
@@ -39,43 +41,69 @@ Usage: $app [directories...]
 Replace all special characters in filenames within the specified directories.
 If no directories are provided, the script will operate in the current directory.
 
-Options:
-  -h, --help              Show this help message and exit.
-  -v, --version           Display the version of this script and exit
-  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
-  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
-  -r, --recursive         Recursively process all files in the specified directories.
-  -n, --recurse-depth <n> The maximum number of subdirectories to recurse into. Default is unlimited.
-  -f, --force <y/n/ask>   Force mode. One of (ask by default):
-                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
-                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
-                            - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
-  -l, --log <level>       Log level. One of (2 by default):
-                            - 0: Silent mode. No output
-                            - 1: Quiet mode. Only errors
-                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                            - 3: Verbose mode. Detailed information about the operations being performed.
+Options
+-h, --help
+	Show this help message and exit.
 
-Examples:
-  Replace special characters in filenames in the current directory.
-    $app
+-v, --version
+	Display the version of this script and exit
 
-  Replace special characters in filenames within ~/Documents.
-    $app ~/Documents
+-d, --dry
+	Dry run. Print the operations that would be performed without actually executing them.
 
-  Replace special characters in filenames within ./foo and /bar.
-    $app ./foo /bar
+-c, --check-version
+	Checks the version of this script against the remote repo version and prints a message on how to update.
 
-  Replace special characters in filenames recursively within ~/Documents.
-    $app -r ~/Documents
+-r, --recursive
+	Recursively process all files in the specified directories.
 
-Special Character Replacement:
-- The script replaces characters that are not alphanumeric or hyphens with underscores.
-- Spaces, punctuation, and other special characters will be replaced.
+-n, --recurse-depth <n>
+	The maximum number of subdirectories to recurse into. Default is unlimited.
 
-Note:
-- Ensure you have the necessary permissions to read/write files in the specified directories.
-- Filenames that only differ by special characters might result in name conflicts after replacement.
+-f, --force <y/n/ask>
+	Force mode. One of (ask by default):
+		- y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+		- n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+		- ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
+
+-l, --log <level>
+	Log level. One of (4 by default):
+		- 0: Silent mode. No output
+		- 1: Error mode. Only errors
+		- 2: Warn mode. Errors and warnings
+		- 3: Dry mode. Errors, warnings, and dry run information
+		- 4: Info mode. Errors, warnings, and informational messages (default)
+		- 5: Verbose mode. Detailed information about the operations being performed
+
+Behaviour
+	The script replaces characters that are not alphanumeric or hyphens with underscores.
+	Spaces, punctuation, and other special characters will be replaced.
+
+	So, for a file named as "my file.txt", it will be renamed to "my_file.txt", notice the space.
+	Another example, "léeme.md" will be renamed to "l_eme.md".
+	If the result of renaming a file is that of either an empty string or "_", the file will be skipped.
+
+Examples
+	Replace special characters in filenames in the current directory.
+		$app
+		$app .
+		$app $(pwd)
+
+	Replace special characters in filenames within ~/Documents.
+		$app ~/Documents
+
+	Replace special characters in filenames within ./foo and /bar.
+		$app ./foo /bar
+
+	Replace special characters in filenames recursively within ~/Documents.
+		$app -r ~/Documents
+
+Special Character Replacement
+	A regex pattern of the form "[^[:alnum:]_.-]" is used to match special characters.
+
+Note
+	- Ensure you have the necessary permissions to read/write files in the specified directories.
+	- Filenames that only differ by special characters might result in name conflicts after replacement.
 EOF
 }
 
@@ -105,31 +133,24 @@ check_version() {
 log() {
 	local level="$1"
 	local message="$2"
+	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
+	local log_level=(
+		"$log_silent"
+		"$log_error"
+		"$log_warn"
+		"$log_dry"
+		"$log_info"
+		"$log_verbose"
+	)
 
-	case "$level" in
-		0)
-			# Silent mode. No output
-			;;
-		1)
-			if ((log >= log_quiet)); then
-				echo "$message"
-			fi
-			;;
-		2)
-			if ((log >= log_normal)); then
-				echo "$message"
-			fi
-			;;
-		3)
-			if ((log >= log_verbose)); then
-				echo "$message"
-			fi
-			;;
-		*)
-			log $log_quiet "[ERROR] Invalid log level: $level" >&2
-			exit 1
-			;;
-	esac
+	#	 Assert log level is valid
+	((level >= 0 && level <= 4)) || {
+		log $log_warn "Invalid log level: $level" >&2
+		return
+	}
+
+	#	Assert message should be printed
+	((log >= log_level[level])) && echo "[${levels[level]}] $message"
 }
 
 parse_args() {
@@ -183,7 +204,7 @@ parse_args() {
 
 				# Validate depth is a positive integer
 				if ! [[ "$recurse_depth" =~ ^[0-9]+$ ]]; then
-					log $log_quiet "[ERROR] Invalid recursion depth: $recurse_depth" >&2
+					log $log_error "Invalid recursion depth: $recurse_depth" >&2
 					exit 1
 				fi
 
@@ -193,7 +214,7 @@ parse_args() {
 				force="$2"
 
 				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
-					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
+					log $log_error "Invalid force mode: $force" >&2
 					exit 1
 				fi
 
@@ -203,14 +224,14 @@ parse_args() {
 				log="$2"
 
 				if [[ ! $log =~ ^[0-3]$ ]]; then
-					log $log_quiet "[ERROR] Invalid log level: $log" >&2
+					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $log_quiet "[ERROR] Unknown option: $1" >&2
+				log $log_error "Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
@@ -249,26 +270,26 @@ replace_special_chars() {
 
 	# If new_name is empty, skip
 	if [[ -z "$new_name" ]]; then
-		log $log_normal "[WARN] $filename: new name is empty. Skipping..." >&2
+		log $log_warn "$filename: new name is empty. Skipping..." >&2
 		return
 	fi
 
 	# If names are the same, skip
 	if [[ "$filename" == "$new_name" ]]; then
-		log $log_verbose "[INFO] $filename: No special characters found. Skipping..."
+		log $log_verbose "$filename: No special characters found. Skipping..."
 		return
 	fi
 
 	target="${filepath%/*}/$new_name"
 
 	if [[ "$dry" == "y" ]]; then
-		log $log_normal "[dry] Would rename: $filename -> $new_name"
+		log $log_dry "Would rename: $filename -> $new_name"
 		if [[ -e "$target" ]]; then
-			log $log_normal "[dry] Would need to overwrite: $target"
+			log $log_dry "Would need to overwrite: $target"
 		fi
 		return 0
 	else
-		log $log_normal "[INFO] Renaming: $filename -> $new_name"
+		$log_info "Renaming: $filename -> $new_name"
 	fi
 
 	# Check if target file doesn't exists
@@ -278,16 +299,16 @@ replace_special_chars() {
 	fi
 
 	if [[ "$force" == "y" ]]; then
-		log $log_verbose "[INFO] Overwriting: $target"
+		log $log_verbose "Overwriting: $target"
 		rm -rf "$target"
 	elif [[ "$force" == "n" ]]; then
-		log $log_normal "[INFO] File exists. Skipping...: $filename"
+		$log_info "File exists. Skipping...: $filename"
 		return 0
 	else
 		read -p "File already exists. Overwrite? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $log_normal "[INFO] Skipping $filename..."
+			$log_info "Skipping $filename..."
 			return 0
 		else
 			rm -rf "$target" # Remove the existing file before renaming
@@ -304,20 +325,20 @@ process_paths() {
 
 	for path in "${paths[@]}"; do
 		if [[ ! -e "$path" ]]; then
-			log $log_quiet "[ERROR] $path: No such file or directory" >&2
+			log $log_error "$path: No such file or directory" >&2
 			continue
 		fi
 
 		if [[ ! -r "$path" ]] || [[ ! -w "$path" ]]; then
-			log $log_quiet "[ERROR] $path: Permission denied" >&2
+			log $log_error "$path: Permission denied" >&2
 			continue
 		fi
 
-		log $log_verbose "[INFO] Processing directory: $path"
+		log $log_verbose "Processing directory: $path"
 		if (( recurse_depth > 0 )); then
-			log $log_verbose "[INFO] Recurse depth: $depth of $recurse_depth"
+			log $log_verbose "Recurse depth: $depth of $recurse_depth"
 		else
-			log $log_verbose "[INFO] Recurse depth: $depth"
+			log $log_verbose "Recurse depth: $depth"
 		fi
 
 		# Process single file
@@ -337,7 +358,7 @@ process_paths() {
 		# Don't forget to process the directory itself
 		replace_special_chars "$path"
 
-		log $log_verbose "[INFO] Recursing into: $path"
+		log $log_verbose "Recursing into: $path"
 
 		# Recursively process directories
 		if ((depth < recurse_depth)); then

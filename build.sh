@@ -15,10 +15,11 @@ usage() {
 	local app=${0##*/}
 	cat <<EOF
 Usage: $app
+
 Creates a tarball of the scripts in the sh directory and save it to the dist directory.
 
-Example:
-    $app - Will create a tarball of the scripts in the sh directory.
+Example
+	$app - Will create a tarball of the scripts in the sh directory.
 EOF
 }
 

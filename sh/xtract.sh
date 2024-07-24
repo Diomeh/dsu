@@ -15,10 +15,13 @@ version="v2.1.30"
 app=${0##*/}
 
 # Log levels
-#log_silent=0
-log_quiet=1
-log_normal=2
-log_verbose=3
+log_silent=0
+log_error=1
+log_warn=2
+log_dry=3
+log_info=4
+log_verbose=5
+log=$log_info
 
 # Args and options
 source=""
@@ -26,7 +29,6 @@ target=""
 LIST="n"
 dry="n"
 force="ask"
-log=$log_normal
 
 # archive_types associative array
 # This associative array maps archive extensions to the commands and flags needed
@@ -56,65 +58,82 @@ declare -A archive_types=(
 usage() {
 	cat <<EOF
 Usage: $app [options] <archive> [target]
+
 Extracts the contents of a compressed archive to a directory.
 
-Arguments:
-  <archive>               The path to the compressed archive file.
-  [target]                Optional. The directory where the contents will be extracted. Defaults to the current directory
-                          or a directory named after the archive file if contents are not immediately inside a folder.
+Arguments
+	<archive>
+		The path to the compressed archive file.
 
-Options:
-  -l, --list              List the contents of the archive.
-  -h, --help              Show this help message and exit.
-  -v, --version           Show the version of this script and exit.
-  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
-  -f, --force <y/n/ask>
-                          Force mode. One of (ask by default):
-                            - y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
-                            - n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
-                            - ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
-  -L, --log <level>
-                          Log level. One of (2 by default):
-                            - 0: Silent mode. No output
-                            - 1: Quiet mode. Only errors
-                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                            - 3: Verbose mode. Detailed information about the operations being performed.
-  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
+	[target]
+		Optional. The directory where the contents will be extracted. Defaults to the current directory
+		or a directory named after the archive file if contents are not immediately inside a folder.
 
-Behavior:
-- If the target directory is not specified, the archive is extracted to the current directory.
-- If the archive contents are not inside a folder, a directory named after the archive will be created for extraction.
+Options
+	-l, --list
+		List the contents of the archive.
 
-Examples:
-  Extract the contents of file.tar.gz to the current directory:
-    $app file.tar.gz
+	-h, --help
+		Show this help message and exit.
 
-  Extract the contents of file.tar.gz to ~/Documents:
-    $app file.tar.gz ~/Documents
+	-v, --version
+		Show the version of this script and exit.
 
-  List the contents of file.tar.gz:
-    $app -l file.tar.gz
+	-d, --dry
+		Dry run. Print the operations that would be performed without actually executing them.
 
-Supported archive types (Archive types not listed here are not supported):
-  - tarball: .tar, .tar.gz, .tgz, .tar.bz2, .tar.xz, .tar.7z
-  - .7z
-  - .zip
-  - .rar
+	-f, --force <y/n/ask>
+		Force mode. One of (ask by default):
+			- y: Automatic yes to prompts. Assume "yes" as the answer to all prompts and run non-interactively.
+			- n: Automatic no to prompts. Assume "no" as the answer to all prompts and run non-interactively.
+			- ask: Prompt for confirmation before overwriting existing backups. This is the default behavior.
 
-Pending supported archive types:
-  - .gz
-  - .bz2
-  - .xz
+	-L, --log <level>
+		Log level. One of (4 by default):
+			- 0: Silent mode. No output
+			- 1: Error mode. Only errors
+			- 2: Warn mode. Errors and warnings
+			- 3: Dry mode. Errors, warnings, and dry run information
+			- 4: Info mode. Errors, warnings, and informational messages (default)
+			- 5: Verbose mode. Detailed information about the operations being performed
 
-Dependencies:
-  - tar: Required for tarball archives.
-  - 7z: Required for 7z archives.
-  - unzip: Required for zip archives.
-  - unrar: Required for rar archives.
+	-c, --check-version
+		Checks the version of this script against the remote repo version and prints a message on how to update.
 
-Notes:
-- Ensure you have the necessary dependencies installed to handle the archive types (e.g., tar, unzip, 7z, unrar).
-- Extraction may require sufficient disk space and write permissions in the target directory.
+Behavior
+	- If the target directory is not specified, the archive is extracted to the current directory.
+	- If the archive contents are not inside a folder, a directory named after the archive will be created for extraction.
+
+Examples
+	Extract the contents of file.tar.gz to the current directory:
+		$app file.tar.gz
+
+	Extract the contents of file.tar.gz to ~/Documents:
+		$app file.tar.gz ~/Documents
+
+	List the contents of file.tar.gz:
+		$app -l file.tar.gz
+
+Supported archive types
+	- tarball: .tar, .tar.gz, .tgz, .tar.bz2, .tar.xz, .tar.7z
+	- .7z
+	- .zip
+	- .rar
+
+Pending supported archive types
+	- .gz
+	- .bz2
+	- .xz
+
+Dependencies
+	- tar: Required for tarball archives.
+	- 7z: Required for 7z archives.
+	- unzip: Required for zip archives.
+	- unrar: Required for rar archives.
+
+Notes
+	- Ensure you have the necessary dependencies installed to handle the archive types (e.g., tar, unzip, 7z, unrar).
+	- Extraction may require sufficient disk space and write permissions in the target directory.
 EOF
 }
 
@@ -144,31 +163,24 @@ check_version() {
 log() {
 	local level="$1"
 	local message="$2"
+	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
+	local log_level=(
+		"$log_silent"
+		"$log_error"
+		"$log_warn"
+		"$log_dry"
+		"$log_info"
+		"$log_verbose"
+	)
 
-	case "$level" in
-		0)
-			# Silent mode. No output
-			;;
-		1)
-			if ((log >= log_quiet)); then
-				echo "$message"
-			fi
-			;;
-		2)
-			if ((log >= log_normal)); then
-				echo "$message"
-			fi
-			;;
-		3)
-			if ((log >= log_verbose)); then
-				echo "$message"
-			fi
-			;;
-		*)
-			log $log_quiet "[ERROR] Invalid log level: $level" >&2
-			exit 1
-			;;
-	esac
+	#	 Assert log level is valid
+	((level >= 0 && level <= 4)) || {
+		log $log_warn "Invalid log level: $level" >&2
+		return
+	}
+
+	#	Assert message should be printed
+	((log >= log_level[level])) && echo "[${levels[level]}] $message"
 }
 
 arg_parse() {
@@ -222,7 +234,7 @@ arg_parse() {
 				force="$2"
 
 				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
-					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
+					log $log_error "Invalid force mode: $force" >&2
 					exit 1
 				fi
 
@@ -232,14 +244,14 @@ arg_parse() {
 				log="$2"
 
 				if [[ ! $log =~ ^[0-3]$ ]]; then
-					log $log_quiet "[ERROR] Invalid log level: $log" >&2
+					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $log_quiet "[ERROR] Unknown option: $1" >&2
+				log $log_error "Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
@@ -249,7 +261,7 @@ arg_parse() {
 				elif [[ -z "$target" ]]; then
 					target="$1"
 				else
-					log $log_quiet "[ERROR] Unknown argument: $1" >&2
+					log $log_error "Unknown argument: $1" >&2
 					usage
 					exit 1
 				fi
@@ -262,30 +274,30 @@ arg_parse() {
 	${target:=.}
 
 	# Will only happen when on verbose mode
-	log $log_verbose "[INFO] Running verbose log level"
+	log $log_verbose "Running verbose log level"
 
 	if [[ "$force" == "y" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'yes' for all prompts."
 	elif [[ "$force" == "n" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "Running interactive mode. Will prompt for confirmation."
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
+		log $log_verbose "Running dry run mode. No changes will be made."
 	fi
 }
 
 check_source() {
 	if [[ -z "$source" ]]; then
-		log $log_quiet "[ERROR] No archive provided" >&2
+		log $log_error "No archive provided" >&2
 		exit 1
 	elif [[ ! -r "$source" ]]; then
-		log $log_quiet "[ERROR] Permission denied: $source" >&2
+		log $log_error "Permission denied: $source" >&2
 		exit 1
 	elif [[ ! -f $source || -z ${archive_types[${source##*.}]:-} ]]; then
-		log $log_quiet "[ERROR] Not a valid archive: $source" >&2
+		log $log_error "Not a valid archive: $source" >&2
 		exit 1
 	fi
 }
@@ -293,38 +305,38 @@ check_source() {
 check_target() {
 	if [[ ! -e "$target" ]]; then
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would create directory: $target"
+			log $log_dry "Would create directory: $target"
 			return
 		fi
 
 		if [[ $force == "y" ]]; then
-			log $log_verbose "[INFO] Creating directory: $target"
+			log $log_verbose "Creating directory: $target"
 			mkdir -p "$target" || {
-				log $log_quiet "[ERROR] Could not create directory: $target" >&2
+				log $log_error "Could not create directory: $target" >&2
 				exit 1
 			}
 		elif [[ $force == "n" ]]; then
-			log $log_quiet "[ERROR] Directory does not exist, exiting: $target" >&2
+			log $log_error "Directory does not exist, exiting: $target" >&2
 			exit 1
 		else
 			read -p "[WARN] Directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				log $log_normal "[INFO] Exiting..."
+				$log_info "Exiting..."
 				exit 0
 			else
-				log $log_verbose "[INFO] Creating directory: $target"
+				log $log_verbose "Creating directory: $target"
 				mkdir -p "$target" || {
-					log $log_quiet "[ERROR] Could not create directory: $target" >&2
+					log $log_error "Could not create directory: $target" >&2
 					exit 1
 				}
 			fi
 		fi
 	elif [[ ! -d "$target" ]]; then
-		log $log_quiet "[ERROR] Not a directory: $target" >&2
+		log $log_error "Not a directory: $target" >&2
 		exit 1
 	elif [[ ! -w "$target" ]]; then
-		log $log_quiet "[ERROR] Permission denied: $target" >&2
+		log $log_error "Permission denied: $target" >&2
 		exit 1
 	fi
 }
@@ -343,22 +355,22 @@ extract_archive() {
 			log $log_verbose "[dry] Would move contents from temporary directory to target directory: $target_dir"
 			log $log_verbose "[dry] Would remove temporary directory"
 		else
-			log $log_normal "[dry] Would extract $source to $target_dir..."
+			log $log_dry "Would extract $source to $target_dir..."
 		fi
 
 		return 0
 	fi
 
-	log $log_verbose "[INFO] Creating temporary directory"
+	log $log_verbose "Creating temporary directory"
 
 	# Create a temporary directory to extract the contents
 	local temp_dir
 	temp_dir=$(mktemp -d) || {
-		log $log_quiet "[ERROR] Could not create temporary directory" >&2
+		log $log_error "Could not create temporary directory" >&2
 		exit 1
 	}
 
-	log $log_normal "[INFO] Extracting $source to $target_dir..."
+	$log_info "Extracting $source to $target_dir..."
 
 	if [[ -z ${target_dir_flag:-} ]]; then
 		if [[ $dependency == "unzip" ]]; then
@@ -379,11 +391,11 @@ extract_archive() {
 	# Check exit status of the extraction command
 	local exit_code=$?
 	if ((exit_code != 0)); then
-		log $log_quiet "[ERROR] Extraction failed with exit code $exit_code" >&2
+		log $log_error "Extraction failed with exit code $exit_code" >&2
 		exit 1
 	fi
 
-	log $log_verbose "[INFO] Checking contents of the extracted directory: $temp_dir"
+	log $log_verbose "Checking contents of the extracted directory: $temp_dir"
 
 	# Check if the contents are immediately inside a folder and move them accordingly
 	# Get basename
@@ -394,21 +406,21 @@ extract_archive() {
 	target="$target_dir/$name"
 
 	if (("$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" > 1)); then
-		log $log_verbose "[INFO] Using archive name as target directory: $target"
-		log $log_verbose "[INFO] Moving contents to target directory"
+		log $log_verbose "Using archive name as target directory: $target"
+		log $log_verbose "Moving contents to target directory"
 
 		mkdir -p "$target"
 		mv "$temp_dir"/* "$target"
 	else
-		log $log_verbose "[INFO] Moving contents to target directory: $target_dir"
+		log $log_verbose "Moving contents to target directory: $target_dir"
 		mv "$temp_dir"/* "$target_dir"
 	fi
 
 	# Remove the temporary directory
-	log $log_verbose "[INFO] Removing temporary directory"
+	log $log_verbose "Removing temporary directory"
 	rmdir "$temp_dir"
 
-	log $log_normal "[INFO] Extraction complete: $target"
+	$log_info "Extraction complete: $target"
 }
 
 run() {
@@ -418,22 +430,22 @@ run() {
 	read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 
 	if ! command -v "$dependency" &>/dev/null; then
-		log $log_quiet "[ERROR] $dependency is needed but not found." >&2
+		log $log_error "$dependency is needed but not found." >&2
 		exit 1
 	fi
 
 	if [[ $dry == "y" ]]; then
 		if [[ $LIST == "Y" ]]; then
-			log $log_normal "[dry] Would list contents of $source"
+			log $log_dry "Would list contents of $source"
 		else
-			log $log_normal "[dry] Would extract contents of $source"
+			log $log_dry "Would extract contents of $source"
 		fi
 	else
 		if [[ $LIST == "Y" ]]; then
-			log $log_normal "[INFO] Listing contents of $source"
+			$log_info "Listing contents of $source"
 			"$dependency" "$list_flag" "$source"
 		else
-			log $log_normal "[INFO] Initiating extraction process."
+			$log_info "Initiating extraction process."
 			extract_archive "$dependency" "$extract_flag" "$target_dir_flag"
 		fi
 	fi
@@ -442,10 +454,10 @@ run() {
 main() {
 	arg_parse "$@"
 
-	log $log_verbose "[INFO] Checking source directory"
+	log $log_verbose "Checking source directory"
 	check_source
 
-	log $log_verbose "[INFO] Checking target directory"
+	log $log_verbose "Checking target directory"
 	check_target
 
 	run

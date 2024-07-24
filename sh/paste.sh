@@ -20,25 +20,31 @@ Usage: $app [options]
 
 Pastes clipboard contents to stdin depending on the session type (Wayland or Xorg).
 
-Options:
-  -h, --help              Show this help message and exit.
-  -v, --version           Show the version of this script and exit.
-  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
+Options
+-h, --help
+	Show this help message and exit.
 
-Behavior:
-- If running under Wayland, the script uses wl-paste to paste the clipboard contents.
-- If running under Xorg, the script uses xclip to paste the clipboard contents.
+-v, --version
+	Show the version of this script and exit.
 
-Dependencies:
-- wl-paste: Required for Wayland sessions.
-- xclip: Required for Xorg sessions.
+-c, --check-version
+	Checks the version of this script against the remote repo version and prints a message on how to update.
 
-Examples:
-  Paste the clipboard contents to stdin:
-    $app
+Behavior
+	- If running under Wayland, the script uses wl-copy to copy the output to the clipboard.
+	- If running under Xorg, the script uses xclip to copy the output to the clipboard.
+	- If the session type is unknown, an error is displayed.
 
-  Paste the clipboard contents to a file:
-    $app > output.txt
+Dependencies
+	- wl-copy: Required for Wayland sessions.
+	- xclip: Required for Xorg sessions.
+
+Examples
+	Paste the clipboard contents to stdin
+		$app
+
+	Paste the clipboard contents to a file
+		$app > output.txt
 EOF
 }
 

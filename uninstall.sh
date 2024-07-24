@@ -12,11 +12,13 @@
 set -uo pipefail
 
 # Log levels
-#log_silent=0
-log_quiet=1
-log_normal=2
-log_verbose=3
-log=$log_normal
+log_silent=0
+log_error=1
+log_warn=2
+log_dry=3
+log_info=4
+log_verbose=5
+log=$log_info
 
 config_path="$HOME/.config/dsu"
 config_file="$config_path/dsu.conf"
@@ -41,42 +43,39 @@ Options:
                             - y: Assume "yes" as the answer to all prompts and run non-interactively.
                             - n: Assume "no" as the answer to all prompts and run non-interactively.
                             - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
-  -l, --log <level>       Log level. One of (2 by default):
-                            - 0: Silent mode. No output
-                            - 1: Quiet mode. Only errors
-                            - 2: Normal mode. Errors warnings and information. This is the default behavior.
-                            - 3: Verbose mode. Detailed information about the operations being performed.
+
+	-l, --log <level>
+		Log level. One of (4 by default):
+			- 0: Silent mode. No output
+			- 1: Error mode. Only errors
+			- 2: Warn mode. Errors and warnings
+			- 3: Dry mode. Errors, warnings, and dry run information
+			- 4: Info mode. Errors, warnings, and informational messages (default)
+			- 5: Verbose mode. Detailed information about the operations being performed
 EOF
 }
 
 log() {
 	local level="$1"
 	local message="$2"
+	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
+	local log_level=(
+		"$log_silent"
+		"$log_error"
+		"$log_warn"
+		"$log_dry"
+		"$log_info"
+		"$log_verbose"
+	)
 
-	case "$level" in
-		0)
-			# Silent mode. No output
-			;;
-		1)
-			if ((log >= log_quiet)); then
-				echo "$message"
-			fi
-			;;
-		2)
-			if ((log >= log_normal)); then
-				echo "$message"
-			fi
-			;;
-		3)
-			if ((log >= log_verbose)); then
-				echo "$message"
-			fi
-			;;
-		*)
-			log $log_quiet "[ERROR] Invalid log level: $level" >&2
-			exit 1
-			;;
-	esac
+	#	 Assert log level is valid
+	((level >= 0 && level <= 4)) || {
+		log $log_warn "Invalid log level: $level" >&2
+		return
+	}
+
+	#	Assert message should be printed
+	((log >= log_level[level])) && echo "[${levels[level]}] $message"
 }
 
 arg_parse() {
@@ -118,7 +117,7 @@ arg_parse() {
 				force="$2"
 
 				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
-					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
+					log $log_error "Invalid force mode: $force" >&2
 					exit 1
 				fi
 
@@ -128,19 +127,19 @@ arg_parse() {
 				log="$2"
 
 				if [[ ! $log =~ ^[0-3]$ ]]; then
-					log $log_quiet "[ERROR] Invalid log level: $log" >&2
+					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $log_quiet "[ERROR] Unknown option: $1" >&2
+				log $log_error "Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				log $log_quiet "[ERROR] Unknown argument: $1" >&2
+				log $log_error "Unknown argument: $1" >&2
 				usage
 				exit 1
 				;;
@@ -148,18 +147,18 @@ arg_parse() {
 	done
 
 	# Will only happen when on verbose mode
-	log $log_verbose "[INFO] Running verbose log level"
+	log $log_verbose "Running verbose log level"
 
 	if [[ "$force" == "y" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'yes' for all prompts."
 	elif [[ "$force" == "n" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "Running interactive mode. Will prompt for confirmation."
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
+		log $log_verbose "Running dry run mode. No changes will be made."
 	fi
 }
 
@@ -169,7 +168,7 @@ path_needs_sudo() {
 	while true; do
 		# Safeguard, prevent infinite loop
 		if [[ -z "$path" ]]; then
-			log $log_quiet "[ERROR] Provided path is not valid: $1" >&2
+			log $log_error "Provided path is not valid: $1" >&2
 			exit 1
 		fi
 		if [[ "$path" == "/" ]]; then
@@ -196,23 +195,23 @@ path_needs_sudo() {
 
 prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
-		log $log_verbose "[INFO] Elevating permissions to continue installation."
+		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		log $log_normal "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
+		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $log_normal "[INFO] Aborting..."
+			$log_info "Aborting..."
 			exit 0
 		fi
 	fi
 
 	# Elevate permissions
 	sudo -v || {
-		log $log_quiet "[ERROR] Failed to elevate permissions. Exiting..." >&2
+		log $log_error "Failed to elevate permissions. Exiting..." >&2
 		exit 1
 	}
 }
@@ -226,13 +225,13 @@ set_sudo_command() {
 	status=$?
 
 	if ((status != 0)); then
-		log $log_quiet "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
+		log $log_error "Could not determine if sudo is needed. Exiting..." >&2
 		exit 1
 	fi
 
 	if [[ "$use_sudo" == "y" ]]; then
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would use sudo to remove binaries from $path"
+			log $log_dry "Would use sudo to remove binaries from $path"
 		else
 			sudo_command="sudo"
 			prompt_for_sudo
@@ -248,7 +247,7 @@ main() {
 	arg_parse "$@"
 
 	if [[ ! -e "$config_file" ]]; then
-		log $log_normal "[INFO] Nothing to uninstall. Configuration file not found: $config_file"
+		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		exit 0
 	fi
 
@@ -269,45 +268,45 @@ main() {
 	done <"$config_file"
 
 	if [[ -z "$type" ]] || [[ -z "$path" ]]; then
-		log $log_quiet "[ERROR] Invalid configuration file: $config_file" >&2
+		log $log_error "Invalid configuration file: $config_file" >&2
 		exit 1
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would remove existing $type installation from $path"
+		log $log_dry "Would remove existing $type installation from $path"
 	else
-		log $log_normal "[INFO] Removing existing $type installation from $path..."
+		$log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
 	for binary in "${binaries[@]}"; do
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would remove binary: $path/$binary"
+			log $log_dry "Would remove binary: $path/$binary"
 			continue
 		fi
 
-		log $log_verbose "[INFO] Removing binary: $path/$binary"
+		log $log_verbose "Removing binary: $path/$binary"
 		$sudo_command rm -f "$path/$binary" || {
-			log $log_quiet "[ERROR] Failed to remove binary: $path/$binary" >&2
+			log $log_error "Failed to remove binary: $path/$binary" >&2
 			exit 1
 		}
 	done
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would remove configuration file: $config_file"
-		log $log_normal "[dry] Would remove log file: $log_file"
-		log $log_normal "[dry] Would remove configuration directory: $config_path"
+		log $log_dry "Would remove configuration file: $config_file"
+		log $log_dry "Would remove log file: $log_file"
+		log $log_dry "Would remove configuration directory: $config_path"
 	else
-		log $log_verbose "[INFO] Removing configuration file: $config_file"
+		log $log_verbose "Removing configuration file: $config_file"
 		rm "$config_file" 2>/dev/null || true
 
-		log $log_verbose "[INFO] Removing log file: $log_file"
+		log $log_verbose "Removing log file: $log_file"
 		rm "$log_file" 2>/dev/null || true
 
-		log $log_verbose "[INFO] Removing configuration directory: $config_path"
+		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		log $log_normal "[INFO] Uninstallation completed successfully."
+		$log_info "Uninstallation completed successfully."
 	fi
 }
 

@@ -12,11 +12,13 @@
 set -uo pipefail
 
 # Log levels
-#log_silent=0
-log_quiet=1
-log_normal=2
-log_verbose=3
-log=$log_normal
+log_silent=0
+log_error=1
+log_warn=2
+log_dry=3
+log_info=4
+log_verbose=5
+log=$log_info
 
 config_path="$HOME/.config/dsu"
 config_file="$config_path/dsu.conf"
@@ -43,55 +45,77 @@ usage() {
 	local name=${0##*/}
 	cat <<EOF
 Usage: $name [OPTIONS]
+
 Installs Diomeh's Script Utilities (dsu) on your system.
 
-Options:
-  -h, --help              Display this help message and exit
-  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
-  -f, --force <y/n/ask>   Interactive mode. If set to other than 'ask' -t is required. One of (ask by default):
-                            - y: Assume "yes" as the answer to all prompts and run non-interactively.
-                            - n: Assume "no" as the answer to all prompts and run non-interactively.
-                            - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
-  -t, --type <type>       Installation type. If -f is set, this option is required. One of:
-                            - rust: Install the Rust CLI binary
-                            - bash: Install the standalone bash scripts
-  -p, --path <path>       The path where the utilities will be installed. If -f is set, this option is required.
-  -l, --log <level>       Log level. One of (2 by default):
-                            - 0: Silent mode. No output
-                            - 1: Quiet mode. Only errors
-                            - 2: Log mode. Errors warnings and information. This is the default behavior.
-                            - 3: Verbose mode. Detailed information about the operations being performed.
+Options
+-h, --help
+	Display this help message and exit
+
+-d, --dry
+	Dry run. Print the operations that would be performed without actually executing them.
+
+-f, --force <y/n/ask>
+	Interactive mode. If set to other than 'ask' -t is required. One of (ask by default):
+		- y: Assume "yes" as the answer to all prompts and run non-interactively.
+		- n: Assume "no" as the answer to all prompts and run non-interactively.
+		- ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
+
+-t, --type <type>
+	Installation type. If -f is set, this option is required. One of:
+		- rust: Install the Rust CLI binary
+		- bash: Install the standalone bash scripts
+
+-p, --path <path>
+	The path where the utilities will be installed. If -f is set, this option is required.
+
+-l, --log <level>
+	Log level. One of (4 by default):
+		- 0: Silent mode. No output
+		- 1: Error mode. Only errors
+		- 2: Warn mode. Errors and warnings
+		- 3: Dry mode. Errors, warnings, and dry run information
+		- 4: Info mode. Errors, warnings, and informational messages (default)
+		- 5: Verbose mode. Detailed information about the operations being performed
+
+Examples
+	Install the Rust CLI binary to the default path (/usr/local/bin)
+		$name -f y -t rust
+
+	Install the standalone bash scripts to a custom path silently
+		$name -l 0 -f y -t bash -p /opt/dsu
+
+Configuration
+	This script will write a configuration file to $config_file and install the utilities to the specified path.
+	The configuration file is used to store the installation path and other settings,
+	and should not be modified unless you know what you are doing.
+
+Logs
+	The script will write a log file to $log_file with the output of the installation process.
 EOF
 }
 
 log() {
 	local level="$1"
 	local message="$2"
+	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
+	local log_level=(
+		"$log_silent"
+		"$log_error"
+		"$log_warn"
+		"$log_dry"
+		"$log_info"
+		"$log_verbose"
+	)
 
-	case "$level" in
-		0)
-			# Silent mode. No output
-			;;
-		1)
-			if ((log >= log_quiet)); then
-				echo "$message"
-			fi
-			;;
-		2)
-			if ((log >= log_normal)); then
-				echo "$message"
-			fi
-			;;
-		3)
-			if ((log >= log_verbose)); then
-				echo "$message"
-			fi
-			;;
-		*)
-			log $log_quiet "[ERROR] Invalid log level: $level" >&2
-			exit 1
-			;;
-	esac
+	#	 Assert log level is valid
+	((level >= 0 && level <= 4)) || {
+		log $log_warn "Invalid log level: $level" >&2
+		return
+	}
+
+	#	Assert message should be printed
+	((log >= log_level[level])) && echo "[${levels[level]}] $message"
 }
 
 arg_parse() {
@@ -133,7 +157,7 @@ arg_parse() {
 				force="$2"
 
 				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
-					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
+					log $log_error "Invalid force mode: $force" >&2
 					exit 1
 				fi
 
@@ -143,7 +167,7 @@ arg_parse() {
 				log="$2"
 
 				if [[ ! $log =~ ^[0-3]$ ]]; then
-					log $log_quiet "[ERROR] Invalid log level: $log" >&2
+					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
 
@@ -153,7 +177,7 @@ arg_parse() {
 				type="$2"
 
 				if [[ ! $type =~ ^(rust|bash)$ ]]; then
-					log $log_quiet "[ERROR] Invalid installation type: $type" >&2
+					log $log_error "Invalid installation type: $type" >&2
 					exit 1
 				fi
 
@@ -171,12 +195,12 @@ arg_parse() {
 				shift 2
 				;;
 			-*)
-				log $log_quiet "[ERROR] Unknown option: $1" >&2
+				log $log_error "Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				log $log_quiet "[ERROR] Unknown argument: $1" >&2
+				log $log_error "Unknown argument: $1" >&2
 				usage
 				exit 1
 				;;
@@ -184,18 +208,18 @@ arg_parse() {
 	done
 
 	# Will only happen when on verbose mode
-	log $log_verbose "[INFO] Running verbose log level"
+	log $log_verbose "Running verbose log level"
 
 	if [[ "$force" == "y" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'yes' for all prompts."
 	elif [[ "$force" == "n" ]]; then
-		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+		log $log_verbose "Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "Running interactive mode. Will prompt for confirmation."
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
+		log $log_verbose "Running dry run mode. No changes will be made."
 	fi
 }
 
@@ -205,7 +229,7 @@ path_needs_sudo() {
 	while true; do
 		# Safeguard, prevent infinite loop
 		if [[ -z "$path" ]]; then
-			log $log_quiet "[ERROR] Provided path is not valid: $1" >&2
+			log $log_error "Provided path is not valid: $1" >&2
 			exit 1
 		fi
 		if [[ "$path" == "/" ]]; then
@@ -232,23 +256,23 @@ path_needs_sudo() {
 
 prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
-		log $log_verbose "[INFO] Elevating permissions to continue installation."
+		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		log $log_normal "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
+		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $log_normal "[INFO] Aborting..."
+			$log_info "Aborting..."
 			exit 0
 		fi
 	fi
 
 	# Elevate permissions
 	sudo -v || {
-		log $log_quiet "[ERROR] Failed to elevate permissions. Exiting..." >&2
+		log $log_error "Failed to elevate permissions. Exiting..." >&2
 		exit 1
 	}
 }
@@ -261,13 +285,13 @@ set_sudo_command() {
 	status=$?
 
 	if ((status != 0)); then
-		log $log_quiet "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
+		log $log_error "Could not determine if sudo is needed. Exiting..." >&2
 		exit 1
 	fi
 
 	if [[ "$use_sudo" == "y" ]]; then
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would use sudo to remove binaries from $path"
+			log $log_dry "Would use sudo to remove binaries from $path"
 		else
 			sudo_command="sudo"
 			prompt_for_sudo
@@ -281,9 +305,9 @@ set_install_path() {
 	# If path is provided, use it
 	if [[ -n "$user_path" ]]; then
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would use provided path: $user_path"
+			log $log_dry "Would use provided path: $user_path"
 		else
-			log $log_verbose "[INFO] Using provided installation path: $user_path"
+			log $log_verbose "Using provided installation path: $user_path"
 		fi
 		install_dir="$user_path"
 		config["path"]="$install_dir"
@@ -331,16 +355,16 @@ set_install_path() {
 		done
 	else
 		install_dir="/usr/local/bin"
-		log $log_verbose "[INFO] Using default installation path: $install_dir"
+		log $log_verbose "Using default installation path: $install_dir"
 	fi
 
 	if [[ -z "$install_dir" ]]; then
-		log $log_quiet "[ERROR] installation path not set." >&2
+		log $log_error "installation path not set." >&2
 		exit 1
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would use installation path: $install_dir"
+		log $log_dry "Would use installation path: $install_dir"
 	fi
 
 	config["path"]="$install_dir"
@@ -348,55 +372,55 @@ set_install_path() {
 
 build_rust_cli() {
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would build Rust CLI binary"
+		log $log_dry "Would build Rust CLI binary"
 		return
 	fi
 
-	log $log_verbose "[INFO] Building Rust CLI binary..."
-	log $log_verbose "[INFO] Checking for cargo..."
+	log $log_verbose "Building Rust CLI binary..."
+	log $log_verbose "Checking for cargo..."
 
 	# Cargo installed?
 	if ! command -v cargo &>/dev/null; then
-		log $log_normal "[WARN] Rust CLI binary not found and Cargo is not installed." >&2
-		log $log_normal "[WARN] For information on how to install cargo, refer to https://doc.rust-lang.org/cargo/getting-started/installation.html" >&2
-		log $log_normal "[WARN] Aborting..." >&2
+		log $log_warn "Rust CLI binary not found and Cargo is not installed." >&2
+		log $log_warn "For information on how to install cargo, refer to https://doc.rust-lang.org/cargo/getting-started/installation.html" >&2
+		log $log_warn "Aborting..." >&2
 		exit 1
 	fi
 
-	log $log_verbose "[INFO] Cargo found!"
+	log $log_verbose "Cargo found!"
 
 	if [[ $force == "n" ]]; then
-		log $log_normal "[WARN] Rust CLI binary not found. Aborting..." >&2
+		log $log_warn "Rust CLI binary not found. Aborting..." >&2
 		exit 1
 	elif [[ $force == "ask" ]]; then
 		# Prompt for user confirmation
 		read -p "Rust CLI binary not found. Do you want to build it now? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $log_normal "[INFO] Aborting..."
+			$log_info "Aborting..."
 			exit 0
 		fi
 	fi
 
-	log $log_verbose "[INFO] Running cargo build..."
+	log $log_verbose "Running cargo build..."
 
 	# Attempt to build the binary. Write output to log file
 	cargo build --release >"$log_file" 2>&1 || {
-		log $log_quiet "[ERROR] Failed to build Rust CLI binary." >&2
+		log $log_error "Failed to build Rust CLI binary." >&2
 		log $log_quiet "[INFO] Check the log file for more information: $log_file" >&2
 		log $log_quiet "[INFO] For more information check log file: $log_file" >&2
 		tail "$log_file" >&2
 		exit 1
 	}
 
-	log $log_verbose "[INFO] Rust CLI binary built successfully!"
+	log $log_verbose "Rust CLI binary built successfully!"
 }
 
 install_rust_cli() {
 	config["type"]="rust"
 
 	set_install_path
-	log $log_normal "[INFO] Installing Rust CLI binary..."
+	$log_info "Installing Rust CLI binary..."
 
 	# Do we have the dsu binary?
 	if [[ ! -e "$cli_src" ]]; then
@@ -405,12 +429,12 @@ install_rust_cli() {
 
 	set_sudo_command "$install_dir"
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would create installation directory: $install_dir"
-		log $log_normal "[dry] Would install binary to installation directory: $install_dir"
+		log $log_dry "Would create installation directory: $install_dir"
+		log $log_dry "Would install binary to installation directory: $install_dir"
 		return
 	fi
 
-	log $log_verbose "[INFO] Creating installation directory: $install_dir"
+	log $log_verbose "Creating installation directory: $install_dir"
 
 	$sudo_command mkdir -p "$install_dir" || {
 		log $log_quiet "Could not create installation directory: $install_dir" >&2
@@ -425,23 +449,23 @@ install_rust_cli() {
 	}
 
 	config_binaries+=("${cli_src##*/}")
-	log $log_normal "[INFO] Binary installed successfully to: $install_dir"
+	$log_info "Binary installed successfully to: $install_dir"
 }
 
 build_bash_scripts() {
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would build Bash scripts tarball"
+		log $log_dry "Would build Bash scripts tarball"
 		return
 	fi
 
 	# Attempt to build the tarball
 	# Write output to log file
-	log $log_normal "[WARN] Bash scripts tarball not found. Building..."
+	log $log_warn "Bash scripts tarball not found. Building..."
 
 	./build.sh >"$log_file" 2>&1 || {
-		log $log_quiet "[ERROR] Failed to build Bash scripts tarball." >&2
-		log $log_normal "[WARN] Check the log file for more information: $log_file" >&2
-		log $log_normal "[WARN] Last 10 lines of log file:" >&2
+		log $log_error "Failed to build Bash scripts tarball." >&2
+		log $log_warn "Check the log file for more information: $log_file" >&2
+		log $log_warn "Last 10 lines of log file:" >&2
 		tail "$log_file" >&2
 		exit 1
 	}
@@ -451,7 +475,7 @@ bash_tarball_to_tmp() {
 	local tmp_dir
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would extract tarball to temporary directory"
+		log $log_dry "Would extract tarball to temporary directory"
 		return
 	fi
 
@@ -459,7 +483,7 @@ bash_tarball_to_tmp() {
 
 	# Extract the tarball to the temporary directory
 	tar -xzf "$tarball" -C "$tmp_dir" || {
-		log $log_quiet "[ERROR] Failed to extract tarball to temporary directory: $tmp_dir" >&2
+		log $log_error "Failed to extract tarball to temporary directory: $tmp_dir" >&2
 		exit 1
 	}
 
@@ -476,9 +500,9 @@ install_bash_scripts() {
 	set_install_path
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would install standalone bash scripts"
+		log $log_dry "Would install standalone bash scripts"
 	else
-		log $log_normal "[INFO] Installing standalone bash scripts..."
+		$log_info "Installing standalone bash scripts..."
 	fi
 
 	# Do we have the tarball with the scripts?
@@ -492,29 +516,29 @@ install_bash_scripts() {
 	tmp_dir=$(bash_tarball_to_tmp)
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would extract tarball to temporary directory"
+		log $log_dry "Would extract tarball to temporary directory"
 	else
-		log $log_verbose "[INFO] Extracted tarball to temporary directory: $tmp_dir"
+		log $log_verbose "Extracted tarball to temporary directory: $tmp_dir"
 	fi
 
 	set_sudo_command "$install_dir"
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would create installation directory: $install_dir"
-		log $log_normal "[dry] Would install bash scripts to installation directory: $install_dir"
+		log $log_dry "Would create installation directory: $install_dir"
+		log $log_dry "Would install bash scripts to installation directory: $install_dir"
 		return
 	fi
 
-	log $log_verbose "[INFO] Creating installation directory: $install_dir"
+	log $log_verbose "Creating installation directory: $install_dir"
 	$sudo_command mkdir -p "$install_dir" || {
-		log $log_quiet "[ERROR] Could not create installation directory: $install_dir" >&2
+		log $log_error "Could not create installation directory: $install_dir" >&2
 		exit 1
 	}
 
-	log $log_verbose "[INFO] Installing bash scripts to installation directory: $install_dir"
+	log $log_verbose "Installing bash scripts to installation directory: $install_dir"
 	for file in "$tmp_dir"/*; do
-		log $log_verbose "[INFO] Installing file: ${file##*/}"
+		log $log_verbose "Installing file: ${file##*/}"
 		$sudo_command install -m 755 "$file" "$install_dir" || {
-			log $log_quiet "[ERROR] Failed to install file to installation directory: $install_dir" >&2
+			log $log_error "Failed to install file to installation directory: $install_dir" >&2
 			exit 1
 		}
 
@@ -522,10 +546,10 @@ install_bash_scripts() {
 	done
 
 	# Clean up the temporary directory
-	log $log_verbose "[INFO] Cleaning up temporary directory: $tmp_dir"
+	log $log_verbose "Cleaning up temporary directory: $tmp_dir"
 	rm -rf "$tmp_dir"
 
-	log $log_normal "[INFO] Bash scripts installed successfully to: $install_dir"
+	$log_info "Bash scripts installed successfully to: $install_dir"
 }
 
 remove_previous_install() {
@@ -550,57 +574,57 @@ remove_previous_install() {
 	done <"$config_file"
 
 	if [[ -z "$type" ]] || [[ -z "$path" ]]; then
-		log $log_quiet "[ERROR] Invalid configuration file: $config_file" >&2
+		log $log_error "Invalid configuration file: $config_file" >&2
 		exit 1
 	fi
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would remove existing $type installation from $path"
+		log $log_dry "Would remove existing $type installation from $path"
 	else
-		log $log_normal "[INFO] Removing existing $type installation from $path..."
+		$log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
 	for binary in "${binaries[@]}"; do
 		if [[ $dry == "y" ]]; then
-			log $log_normal "[dry] Would remove binary: $path/$binary"
+			log $log_dry "Would remove binary: $path/$binary"
 			continue
 		fi
 
-		log $log_verbose "[INFO] Removing binary: $path/$binary"
+		log $log_verbose "Removing binary: $path/$binary"
 		$sudo_command rm -f "$path/$binary" || {
-			log $log_quiet "[ERROR] Failed to remove binary: $path/$binary" >&2
+			log $log_error "Failed to remove binary: $path/$binary" >&2
 			exit 1
 		}
 	done
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would remove configuration file: $config_file"
-		log $log_normal "[dry] Would remove log file: $log_file"
-		log $log_normal "[dry] Would remove configuration directory: $config_path"
+		log $log_dry "Would remove configuration file: $config_file"
+		log $log_dry "Would remove log file: $log_file"
+		log $log_dry "Would remove configuration directory: $config_path"
 	else
-		log $log_verbose "[INFO] Removing configuration file: $config_file"
+		log $log_verbose "Removing configuration file: $config_file"
 		rm "$config_file" 2>/dev/null || true
 
-		log $log_verbose "[INFO] Removing log file: $log_file"
+		log $log_verbose "Removing log file: $log_file"
 		rm "$log_file" 2>/dev/null || true
 
-		log $log_verbose "[INFO] Removing configuration directory: $config_path"
+		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		log $log_normal "[INFO] Uninstallation completed successfully."
+		$log_info "Uninstallation completed successfully."
 	fi
 }
 
 pre_install() {
 	# Check for previous installation
 	if [[ ! -e "$config_file" ]]; then
-		log $log_normal "[INFO] Nothing to uninstall. Configuration file not found: $config_file"
+		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		return
 	fi
 
 	if [[ $force == "y" ]]; then
-		log $log_normal "[INFO] Previous installation found. Removing..."
+		$log_info "Previous installation found. Removing..."
 		remove_previous_install
 	elif [[ $force == "n" ]]; then
 		log $log_quiet "Previous installation found. Exiting..."
@@ -624,7 +648,7 @@ do_install() {
 		case "$type" in
 			1) install_rust_cli ;;
 			2) install_bash_scripts ;;
-			*) log $log_quiet "[ERROR] Invalid installation type: $type." >&2 ;;
+			*) log $log_error "Invalid installation type: $type." >&2 ;;
 		esac
 		return
 	fi
@@ -675,13 +699,13 @@ write_to_conf() {
 
 init_config() {
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would write configuration file"
-		log $log_normal "[dry] Would create configuration directory: $config_path"
+		log $log_dry "Would write configuration file"
+		log $log_dry "Would create configuration directory: $config_path"
 		return
 	fi
 
-	log $log_normal "[INFO] Writing configuration file..."
-	log $log_verbose "[INFO] Creating configuration directory: $config_path"
+	$log_info "Writing configuration file..."
+	log $log_verbose "Creating configuration directory: $config_path"
 
 	mkdir -p "$config_path"
 	rm "$config_file" 2>/dev/null || true
@@ -704,25 +728,25 @@ post_install() {
 	local shell_config_file
 
 	if [[ $dry == "y" ]]; then
-		log $log_normal "[dry] Would check if installation path is in PATH environment variable"
+		log $log_dry "Would check if installation path is in PATH environment variable"
 		return
 	fi
 
-	log $log_normal "[INFO] Installation complete!"
+	$log_info "Installation complete!"
 
 	# shellcheck disable=SC2016
 	reject_msg='[INFO] Please make sure to add the installation path to your PATH environment variable.
 [INFO] For example, add the following line to your shell configuration file:
   export PATH="$PATH:'"$install_dir"'"'
 
-	log $log_verbose "[INFO] Checking if installation path is in PATH environment variable..."
+	log $log_verbose "Checking if installation path is in PATH environment variable..."
 	for path in $(echo "$PATH" | tr ':' '\n' | sort | uniq); do
 		if [[ "$path" == "$install_dir" ]]; then
 			return
 		fi
 	done
 
-	log $log_verbose "[INFO] Installation path not found in PATH environment variable."
+	log $log_verbose "Installation path not found in PATH environment variable."
 	case "$SHELL" in
 		*/bash)
 			shell_config_file="$HOME/.bashrc"
@@ -740,7 +764,7 @@ post_install() {
 	else
 		if [[ $force == "y" ]]; then
 			echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-			log $log_normal "[INFO] Installation path added to PATH environment variable."
+			$log_info "Installation path added to PATH environment variable."
 		elif [[ $force == "n" ]]; then
 			echo "$reject_msg"
 		else
@@ -749,14 +773,14 @@ post_install() {
 			echo ""
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
 				echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-				log $log_normal "[INFO] Installation path added to PATH environment variable."
+				$log_info "Installation path added to PATH environment variable."
 			else
 				echo "$reject_msg"
 			fi
 		fi
 	fi
 
-	log $log_normal "[INFO] Do not forget to source your shell configuration file to apply the changes."
+	$log_info "Do not forget to source your shell configuration file to apply the changes."
 	echo "    source $shell_config_file"
 }
 

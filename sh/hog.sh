@@ -24,22 +24,32 @@ Displays the disk usage of files and directories within the specified directory,
 sorted by size in descending order. If no directory is specified, the current
 directory is used by default.
 
-Options:
-  -h, --help              Show this help message and exit.
-  -v, --version           Show the version of this script and exit.
-  -c, --check-version     Checks the version of this script against the remote repo version and prints a message on how to update.
+Options
+-h, --help
+	Show this help message and exit.
 
-Arguments:
-  DIRECTORY           The directory to analyze. If not specified, the current directory (.) is used.
+-v, --version
+	Show the version of this script and exit.
 
-Example:
-  $app                  # Analyze the current directory
-  $app /path/to/dir     # Analyze the specified directory
+-c, --check-version
+	Checks the version of this script against the remote repo version and prints a message on how to update.
 
-Notes:
-  - The script uses 'du' to calculate disk usage and 'sort' to sort the results.
-  - The '--one-file-system' option for 'du' ensures that only the file system
-    containing the specified directory is analyzed, ignoring mounted file systems.
+Arguments
+	directory
+		Required. The directory to analyze. If not specified, the current directory "." is used.
+
+Example
+	Analyzing the current directory
+		$app
+
+	Analyzing a specific directory
+		$app /path/to/directory
+
+Notes
+	The script uses 'du' to calculate disk usage and 'sort' to sort the results.
+
+	The '--one-file-system' option for 'du' ensures that only the file system
+	containing the specified directory is analyzed, ignoring mounted file systems.
 EOF
 }
 
