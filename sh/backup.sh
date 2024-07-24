@@ -11,21 +11,21 @@
 
 set -uo pipefail
 
-VERSION="v2.1.30"
+version="v2.1.30"
 app=${0##*/}
 
 # Log levels
-#LOG_SILENT=0
-LOG_QUIET=1
-LOG_NORMAL=2
-LOG_VERBOSE=3
+#log_silent=0
+log_quiet=1
+log_normal=2
+log_verbose=3
 
 # Args and options
-SOURCE=""
-TARGET=""
-DRY="n"
-FORCE="ask"
-LOG=$LOG_NORMAL
+source=""
+target=""
+dry="n"
+force="ask"
+log=$log_normal
 
 usage() {
 	cat <<EOF
@@ -83,21 +83,21 @@ EOF
 }
 
 version() {
-	echo "$app version $VERSION"
+	echo "$app version $version"
 }
 
 check_version() {
-	echo "[INFO] Current version: $VERSION"
+	echo "[INFO] Current version: $version"
 	echo "[INFO] Checking for updates..."
 
 	local remote_version
-	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/version)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
-	if [[ "$remote_version" != "$VERSION" ]]; then
+	if [[ "$remote_version" != "$version" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -114,22 +114,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if ((LOG >= LOG_QUIET)); then
+			if ((log >= log_quiet)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if ((LOG >= LOG_NORMAL)); then
+			if ((log >= log_normal)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if ((LOG >= LOG_VERBOSE)); then
+			if ((log >= log_verbose)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
+			log $log_quiet "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -175,41 +175,41 @@ arg_parse() {
 				exit 0
 				;;
 			-d | --dry)
-				DRY="y"
+				dry="y"
 				shift
 				;;
 			-f | --force)
-				FORCE="$2"
+				force="$2"
 
-				if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
+					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-l | --log)
-				LOG="$2"
+				log="$2"
 
-				if [[ ! $LOG =~ ^[0-3]$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+				if [[ ! $log =~ ^[0-3]$ ]]; then
+					log $log_quiet "[ERROR] Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+				log $log_quiet "[ERROR] Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				if [[ -z "$SOURCE" ]]; then
-					SOURCE="$1"
-				elif [[ -z "$TARGET" ]]; then
-					TARGET="$1"
+				if [[ -z "$source" ]]; then
+					source="$1"
+				elif [[ -z "$target" ]]; then
+					target="$1"
 				else
-					log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
+					log $log_quiet "[ERROR] Unknown argument: $1" >&2
 					usage
 					exit 1
 				fi
@@ -219,69 +219,69 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${TARGET:=.}
+	${target:=.}
 
 	# Will only happen when on verbose mode
-	log $LOG_VERBOSE "[INFO] Running verbose log level"
+	log $log_verbose "[INFO] Running verbose log level"
 
-	if [[ "$FORCE" == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-	elif [[ "$FORCE" == "n" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+	if [[ "$force" == "y" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+	elif [[ "$force" == "n" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
 	fi
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
+	if [[ $dry == "y" ]]; then
+		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
 	fi
 }
 
 prepare_source() {
-	if [[ ! -e "$SOURCE" ]]; then
-		log $LOG_QUIET "[ERROR] Source not found: $SOURCE" >&2
+	if [[ ! -e "$source" ]]; then
+		log $log_quiet "[ERROR] Source not found: $source" >&2
 		exit 1
-	elif [[ ! -r "$SOURCE" ]]; then
-		log $LOG_QUIET "[ERROR] Permission denied: $SOURCE" >&2
+	elif [[ ! -r "$source" ]]; then
+		log $log_quiet "[ERROR] Permission denied: $source" >&2
 		exit 1
 	fi
 }
 
 prepare_target() {
-	if [[ ! -e "$TARGET" ]]; then
-		if [[ $DRY == "y" ]]; then
-			log $LOG_NORMAL "[DRY] Would create backup directory: $TARGET"
+	if [[ ! -e "$target" ]]; then
+		if [[ $dry == "y" ]]; then
+			log $log_normal "[dry] Would create backup directory: $target"
 			return
 		fi
 
-		if [[ $FORCE == "y" ]]; then
-			log $LOG_VERBOSE "[INFO] Creating backup directory: $TARGET"
-			mkdir -p "$TARGET" || {
-				log $LOG_QUIET "[ERROR] Could not create backup directory: $TARGET" >&2
+		if [[ $force == "y" ]]; then
+			log $log_verbose "[INFO] Creating backup directory: $target"
+			mkdir -p "$target" || {
+				log $log_quiet "[ERROR] Could not create backup directory: $target" >&2
 				exit 1
 			}
-		elif [[ $FORCE == "n" ]]; then
-			log $LOG_QUIET "[ERROR] Backup directory does not exist, exiting: $TARGET" >&2
+		elif [[ $force == "n" ]]; then
+			log $log_quiet "[ERROR] Backup directory does not exist, exiting: $target" >&2
 			exit 1
 		else
 			read -p "[WARN] Backup directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				log $LOG_NORMAL "[INFO] Exiting..."
+				log $log_normal "[INFO] Exiting..."
 				exit 0
 			else
-				log $LOG_VERBOSE "[INFO] Creating backup directory: $TARGET"
-				mkdir -p "$TARGET" || {
-					log $LOG_QUIET "[ERROR] Could not create backup directory: $TARGET" >&2
+				log $log_verbose "[INFO] Creating backup directory: $target"
+				mkdir -p "$target" || {
+					log $log_quiet "[ERROR] Could not create backup directory: $target" >&2
 					exit 1
 				}
 			fi
 		fi
-	elif [[ ! -d "$TARGET" ]]; then
-		log $LOG_QUIET "[ERROR] Not a directory: $TARGET" >&2
+	elif [[ ! -d "$target" ]]; then
+		log $log_quiet "[ERROR] Not a directory: $target" >&2
 		exit 1
-	elif [[ ! -w "$TARGET" ]]; then
-		log $LOG_QUIET "[ERROR] Permission denied: $TARGET" >&2
+	elif [[ ! -w "$target" ]]; then
+		log $log_quiet "[ERROR] Permission denied: $target" >&2
 		exit 1
 	fi
 }
@@ -289,24 +289,24 @@ prepare_target() {
 run() {
 	local filename timestamp backup_path
 
-	filename=${SOURCE##*/}
+	filename=${source##*/}
 	timestamp=$(date +%Y-%m-%d_%H-%M-%S)
-	backup_path="$TARGET/$filename.$timestamp.bak"
+	backup_path="$target/$filename.$timestamp.bak"
 
-	log $LOG_VERBOSE "[INFO] Creating file backup: $SOURCE"
-	log $LOG_VERBOSE "[INFO] To backup target: $backup_path"
+	log $log_verbose "[INFO] Creating file backup: $source"
+	log $log_verbose "[INFO] To backup target: $backup_path"
 
 	if [[ -e "$backup_path" ]]; then
-		if [[ $DRY == "y" ]]; then
-			log $LOG_NORMAL "[DRY] Would remove existing backup: $backup_path"
-		elif [[ "$FORCE" == "y" ]]; then
-			log $LOG_VERBOSE "[INFO] Removing existing backup: $backup_path"
+		if [[ $dry == "y" ]]; then
+			log $log_normal "[dry] Would remove existing backup: $backup_path"
+		elif [[ "$force" == "y" ]]; then
+			log $log_verbose "[INFO] Removing existing backup: $backup_path"
 			rm -rf "$backup_path"
-		elif [[ "$FORCE" == "n" ]]; then
-			log $LOG_NORMAL "[INFO] Backup target already exists: $backup_path. Exiting..."
+		elif [[ "$force" == "n" ]]; then
+			log $log_normal "[INFO] Backup target already exists: $backup_path. Exiting..."
 			exit 0
 		else
-			log $LOG_NORMAL "[WARN] Backup target already exists: $backup_path"
+			log $log_normal "[WARN] Backup target already exists: $backup_path"
 			read -p "Overwrite backup? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -315,17 +315,17 @@ run() {
 		fi
 	fi
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_NORMAL "[DRY] Would create backup: $backup_path"
+	if [[ $dry == "y" ]]; then
+		log $log_normal "[dry] Would create backup: $backup_path"
 	else
 		# create the backup
-		if [[ -d "$SOURCE" ]]; then
-			cp -r "$SOURCE" "$backup_path"
+		if [[ -d "$source" ]]; then
+			cp -r "$source" "$backup_path"
 		else
-			cp "$SOURCE" "$backup_path"
+			cp "$source" "$backup_path"
 		fi
 
-		log $LOG_NORMAL "[INFO] Created backup: $backup_path"
+		log $log_normal "[INFO] Created backup: $backup_path"
 	fi
 }
 

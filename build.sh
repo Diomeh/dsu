@@ -24,13 +24,13 @@ EOF
 
 make_tarball() {
 	local version filepath filename tarball_name
-	local version_file="./VERSION"
+	local version_file="./version"
 	local src_dir="./sh"
 	local dist_dir="./dist"
 	local bin_dir="$dist_dir/bin"
 
 	if [[ ! -f "$version_file" ]]; then
-		echo "Error: VERSION file not found" >&2
+		echo "Error: version file not found" >&2
 		echo "Are you in the correct directory?" >&2
 		exit 1
 	fi

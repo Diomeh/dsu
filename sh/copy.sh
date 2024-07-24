@@ -11,7 +11,7 @@
 
 set -uo pipefail
 
-VERSION="v2.1.30"
+version="v2.1.30"
 app=${0##*/}
 
 usage() {
@@ -40,21 +40,21 @@ EOF
 }
 
 version() {
-	echo "$app version $VERSION"
+	echo "$app version $version"
 }
 
 check_version() {
-	echo "[INFO] Current version: $VERSION"
+	echo "[INFO] Current version: $version"
 	echo "[INFO] Checking for updates..."
 
 	local remote_version
-	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/version)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
-	if [[ "$remote_version" != "$VERSION" ]]; then
+	if [[ "$remote_version" != "$version" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else

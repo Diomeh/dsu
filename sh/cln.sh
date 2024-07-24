@@ -13,24 +13,24 @@ set -uo pipefail
 
 IFS=$'\n\t'
 
-VERSION="v2.1.31"
+version="v2.1.31"
 app=${0##*/}
 
 # Log levels
-#LOG_SILENT=0
-LOG_QUIET=1
-LOG_NORMAL=2
-LOG_VERBOSE=3
+#log_silent=0
+log_quiet=1
+log_normal=2
+log_verbose=3
 
 # arguments and options
-DRY="n"
-RECURSE="n"
-RECURSE_DEPTH=""
-FORCE="ask"
-LOG="2"
+dry="n"
+recurse="n"
+recurse_depth=""
+force="ask"
+log="2"
 
 # Paths to process
-PATHS=()
+paths=()
 
 usage() {
 	cat <<EOF
@@ -80,21 +80,21 @@ EOF
 }
 
 version() {
-	echo "$app version $VERSION"
+	echo "$app version $version"
 }
 
 check_version() {
-	echo "[INFO] Current version: $VERSION"
+	echo "[INFO] Current version: $version"
 	echo "[INFO] Checking for updates..."
 
 	local remote_version
-	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/version)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
-	if [[ "$remote_version" != "$VERSION" ]]; then
+	if [[ "$remote_version" != "$version" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -111,22 +111,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if ((LOG >= LOG_QUIET)); then
+			if ((log >= log_quiet)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if ((LOG >= LOG_NORMAL)); then
+			if ((log >= log_normal)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if ((LOG >= LOG_VERBOSE)); then
+			if ((log >= log_verbose)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
+			log $log_quiet "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -171,59 +171,59 @@ parse_args() {
 				exit 0
 				;;
 			-d | --dry)
-				DRY="y"
+				dry="y"
 				shift
 				;;
 			-r | --recursive)
-				RECURSE="y"
+				recurse="y"
 				shift
 				;;
 			-n | --recurse-depth)
-				RECURSE_DEPTH="$2"
+				recurse_depth="$2"
 
 				# Validate depth is a positive integer
-				if ! [[ "$RECURSE_DEPTH" =~ ^[0-9]+$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid recursion depth: $RECURSE_DEPTH" >&2
+				if ! [[ "$recurse_depth" =~ ^[0-9]+$ ]]; then
+					log $log_quiet "[ERROR] Invalid recursion depth: $recurse_depth" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-f | --force)
-				FORCE="$2"
+				force="$2"
 
-				if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
+					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-l | --log)
-				LOG="$2"
+				log="$2"
 
-				if [[ ! $LOG =~ ^[0-3]$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+				if [[ ! $log =~ ^[0-3]$ ]]; then
+					log $log_quiet "[ERROR] Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+				log $log_quiet "[ERROR] Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				PATHS+=("$1")
+				paths+=("$1")
 				shift
 				;;
 		esac
 	done
 
 	# If no paths are provided, default to the current directory
-	if ((${#PATHS[@]} == 0)); then
-		PATHS+=(".")
+	if ((${#paths[@]} == 0)); then
+		paths+=(".")
 	fi
 }
 
@@ -249,26 +249,26 @@ replace_special_chars() {
 
 	# If new_name is empty, skip
 	if [[ -z "$new_name" ]]; then
-		log $LOG_NORMAL "[WARN] $filename: new name is empty. Skipping..." >&2
+		log $log_normal "[WARN] $filename: new name is empty. Skipping..." >&2
 		return
 	fi
 
 	# If names are the same, skip
 	if [[ "$filename" == "$new_name" ]]; then
-		log $LOG_VERBOSE "[INFO] $filename: No special characters found. Skipping..."
+		log $log_verbose "[INFO] $filename: No special characters found. Skipping..."
 		return
 	fi
 
 	target="${filepath%/*}/$new_name"
 
-	if [[ "$DRY" == "y" ]]; then
-		log $LOG_NORMAL "[DRY] Would rename: $filename -> $new_name"
+	if [[ "$dry" == "y" ]]; then
+		log $log_normal "[dry] Would rename: $filename -> $new_name"
 		if [[ -e "$target" ]]; then
-			log $LOG_NORMAL "[DRY] Would need to overwrite: $target"
+			log $log_normal "[dry] Would need to overwrite: $target"
 		fi
 		return 0
 	else
-		log $LOG_NORMAL "[INFO] Renaming: $filename -> $new_name"
+		log $log_normal "[INFO] Renaming: $filename -> $new_name"
 	fi
 
 	# Check if target file doesn't exists
@@ -277,17 +277,17 @@ replace_special_chars() {
 		return 0
 	fi
 
-	if [[ "$FORCE" == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Overwriting: $target"
+	if [[ "$force" == "y" ]]; then
+		log $log_verbose "[INFO] Overwriting: $target"
 		rm -rf "$target"
-	elif [[ "$FORCE" == "n" ]]; then
-		log $LOG_NORMAL "[INFO] File exists. Skipping...: $filename"
+	elif [[ "$force" == "n" ]]; then
+		log $log_normal "[INFO] File exists. Skipping...: $filename"
 		return 0
 	else
 		read -p "File already exists. Overwrite? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $LOG_NORMAL "[INFO] Skipping $filename..."
+			log $log_normal "[INFO] Skipping $filename..."
 			return 0
 		else
 			rm -rf "$target" # Remove the existing file before renaming
@@ -304,20 +304,20 @@ process_paths() {
 
 	for path in "${paths[@]}"; do
 		if [[ ! -e "$path" ]]; then
-			log $LOG_QUIET "[ERROR] $path: No such file or directory" >&2
+			log $log_quiet "[ERROR] $path: No such file or directory" >&2
 			continue
 		fi
 
 		if [[ ! -r "$path" ]] || [[ ! -w "$path" ]]; then
-			log $LOG_QUIET "[ERROR] $path: Permission denied" >&2
+			log $log_quiet "[ERROR] $path: Permission denied" >&2
 			continue
 		fi
 
-		log $LOG_VERBOSE "[INFO] Processing directory: $path"
-		if (( RECURSE_DEPTH > 0 )); then
-			log $LOG_VERBOSE "[INFO] Recurse depth: $depth of $RECURSE_DEPTH"
+		log $log_verbose "[INFO] Processing directory: $path"
+		if (( recurse_depth > 0 )); then
+			log $log_verbose "[INFO] Recurse depth: $depth of $recurse_depth"
 		else
-			log $LOG_VERBOSE "[INFO] Recurse depth: $depth"
+			log $log_verbose "[INFO] Recurse depth: $depth"
 		fi
 
 		# Process single file
@@ -327,7 +327,7 @@ process_paths() {
 		fi
 
 		# Process all files in the directory
-		if [[ "$RECURSE" != "y" ]]; then
+		if [[ "$recurse" != "y" ]]; then
 			for file in "$path"/*; do
 				replace_special_chars "$file"
 			done
@@ -337,10 +337,10 @@ process_paths() {
 		# Don't forget to process the directory itself
 		replace_special_chars "$path"
 
-		log $LOG_VERBOSE "[INFO] Recursing into: $path"
+		log $log_verbose "[INFO] Recursing into: $path"
 
 		# Recursively process directories
-		if ((depth < RECURSE_DEPTH)); then
+		if ((depth < recurse_depth)); then
 			for file in "$path"/*; do
 				if [[ -d "$file" ]]; then
 					process_paths "$((depth + 1))" "$file"
@@ -354,7 +354,7 @@ process_paths() {
 
 main() {
 	parse_args "$@"
-	process_paths 0 "${PATHS[@]}"
+	process_paths 0 "${paths[@]}"
 }
 
 main "$@"

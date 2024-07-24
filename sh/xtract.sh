@@ -11,22 +11,22 @@
 
 set -uo pipefail
 
-VERSION="v2.1.30"
+version="v2.1.30"
 app=${0##*/}
 
 # Log levels
-#LOG_SILENT=0
-LOG_QUIET=1
-LOG_NORMAL=2
-LOG_VERBOSE=3
+#log_silent=0
+log_quiet=1
+log_normal=2
+log_verbose=3
 
 # Args and options
-SOURCE=""
-TARGET=""
+source=""
+target=""
 LIST="n"
-DRY="n"
-FORCE="ask"
-LOG=$LOG_NORMAL
+dry="n"
+force="ask"
+log=$log_normal
 
 # archive_types associative array
 # This associative array maps archive extensions to the commands and flags needed
@@ -119,21 +119,21 @@ EOF
 }
 
 version() {
-	echo "$app version $VERSION"
+	echo "$app version $version"
 }
 
 check_version() {
-	echo "[INFO] Current version: $VERSION"
+	echo "[INFO] Current version: $version"
 	echo "[INFO] Checking for updates..."
 
 	local remote_version
-	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/version)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
-	if [[ "$remote_version" != "$VERSION" ]]; then
+	if [[ "$remote_version" != "$version" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -150,22 +150,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if ((LOG >= LOG_QUIET)); then
+			if ((log >= log_quiet)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if ((LOG >= LOG_NORMAL)); then
+			if ((log >= log_normal)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if ((LOG >= LOG_VERBOSE)); then
+			if ((log >= log_verbose)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
+			log $log_quiet "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -215,41 +215,41 @@ arg_parse() {
 				shift
 				;;
 			-d | --dry)
-				DRY="y"
+				dry="y"
 				shift
 				;;
 			-f | --force)
-				FORCE="$2"
+				force="$2"
 
-				if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
+					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-L | --log)
-				LOG="$2"
+				log="$2"
 
-				if [[ ! $LOG =~ ^[0-3]$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+				if [[ ! $log =~ ^[0-3]$ ]]; then
+					log $log_quiet "[ERROR] Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+				log $log_quiet "[ERROR] Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				if [[ -z "$SOURCE" ]]; then
-					SOURCE="$1"
-				elif [[ -z "$TARGET" ]]; then
-					TARGET="$1"
+				if [[ -z "$source" ]]; then
+					source="$1"
+				elif [[ -z "$target" ]]; then
+					target="$1"
 				else
-					log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
+					log $log_quiet "[ERROR] Unknown argument: $1" >&2
 					usage
 					exit 1
 				fi
@@ -259,72 +259,72 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${TARGET:=.}
+	${target:=.}
 
 	# Will only happen when on verbose mode
-	log $LOG_VERBOSE "[INFO] Running verbose log level"
+	log $log_verbose "[INFO] Running verbose log level"
 
-	if [[ "$FORCE" == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-	elif [[ "$FORCE" == "n" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+	if [[ "$force" == "y" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+	elif [[ "$force" == "n" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
 	fi
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
+	if [[ $dry == "y" ]]; then
+		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
 	fi
 }
 
 check_source() {
-	if [[ -z "$SOURCE" ]]; then
-		log $LOG_QUIET "[ERROR] No archive provided" >&2
+	if [[ -z "$source" ]]; then
+		log $log_quiet "[ERROR] No archive provided" >&2
 		exit 1
-	elif [[ ! -r "$SOURCE" ]]; then
-		log $LOG_QUIET "[ERROR] Permission denied: $SOURCE" >&2
+	elif [[ ! -r "$source" ]]; then
+		log $log_quiet "[ERROR] Permission denied: $source" >&2
 		exit 1
-	elif [[ ! -f $SOURCE || -z ${archive_types[${SOURCE##*.}]:-} ]]; then
-		log $LOG_QUIET "[ERROR] Not a valid archive: $SOURCE" >&2
+	elif [[ ! -f $source || -z ${archive_types[${source##*.}]:-} ]]; then
+		log $log_quiet "[ERROR] Not a valid archive: $source" >&2
 		exit 1
 	fi
 }
 
 check_target() {
-	if [[ ! -e "$TARGET" ]]; then
-		if [[ $DRY == "y" ]]; then
-			log $LOG_NORMAL "[DRY] Would create directory: $TARGET"
+	if [[ ! -e "$target" ]]; then
+		if [[ $dry == "y" ]]; then
+			log $log_normal "[dry] Would create directory: $target"
 			return
 		fi
 
-		if [[ $FORCE == "y" ]]; then
-			log $LOG_VERBOSE "[INFO] Creating directory: $TARGET"
-			mkdir -p "$TARGET" || {
-				log $LOG_QUIET "[ERROR] Could not create directory: $TARGET" >&2
+		if [[ $force == "y" ]]; then
+			log $log_verbose "[INFO] Creating directory: $target"
+			mkdir -p "$target" || {
+				log $log_quiet "[ERROR] Could not create directory: $target" >&2
 				exit 1
 			}
-		elif [[ $FORCE == "n" ]]; then
-			log $LOG_QUIET "[ERROR] Directory does not exist, exiting: $TARGET" >&2
+		elif [[ $force == "n" ]]; then
+			log $log_quiet "[ERROR] Directory does not exist, exiting: $target" >&2
 			exit 1
 		else
 			read -p "[WARN] Directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				log $LOG_NORMAL "[INFO] Exiting..."
+				log $log_normal "[INFO] Exiting..."
 				exit 0
 			else
-				log $LOG_VERBOSE "[INFO] Creating directory: $TARGET"
-				mkdir -p "$TARGET" || {
-					log $LOG_QUIET "[ERROR] Could not create directory: $TARGET" >&2
+				log $log_verbose "[INFO] Creating directory: $target"
+				mkdir -p "$target" || {
+					log $log_quiet "[ERROR] Could not create directory: $target" >&2
 					exit 1
 				}
 			fi
 		fi
-	elif [[ ! -d "$TARGET" ]]; then
-		log $LOG_QUIET "[ERROR] Not a directory: $TARGET" >&2
+	elif [[ ! -d "$target" ]]; then
+		log $log_quiet "[ERROR] Not a directory: $target" >&2
 		exit 1
-	elif [[ ! -w "$TARGET" ]]; then
-		log $LOG_QUIET "[ERROR] Permission denied: $TARGET" >&2
+	elif [[ ! -w "$target" ]]; then
+		log $log_quiet "[ERROR] Permission denied: $target" >&2
 		exit 1
 	fi
 }
@@ -334,106 +334,106 @@ extract_archive() {
 	local dependency="$1"
 	local extract_flag="$2"
 	local target_dir_flag="$3"
-	local target_dir="$TARGET"
+	local target_dir="$target"
 
-	if [[ $DRY == "y" ]]; then
-		if [[ "$LOG" == "$LOG_VERBOSE" ]]; then
-			log $LOG_VERBOSE "[DRY] Would create temporary directory"
-			log $LOG_VERBOSE "[DRY] Would extract $SOURCE to temporary directory"
-			log $LOG_VERBOSE "[DRY] Would move contents from temporary directory to target directory: $target_dir"
-			log $LOG_VERBOSE "[DRY] Would remove temporary directory"
+	if [[ $dry == "y" ]]; then
+		if [[ "$log" == "$log_verbose" ]]; then
+			log $log_verbose "[dry] Would create temporary directory"
+			log $log_verbose "[dry] Would extract $source to temporary directory"
+			log $log_verbose "[dry] Would move contents from temporary directory to target directory: $target_dir"
+			log $log_verbose "[dry] Would remove temporary directory"
 		else
-			log $LOG_NORMAL "[DRY] Would extract $SOURCE to $target_dir..."
+			log $log_normal "[dry] Would extract $source to $target_dir..."
 		fi
 
 		return 0
 	fi
 
-	log $LOG_VERBOSE "[INFO] Creating temporary directory"
+	log $log_verbose "[INFO] Creating temporary directory"
 
 	# Create a temporary directory to extract the contents
 	local temp_dir
 	temp_dir=$(mktemp -d) || {
-		log $LOG_QUIET "[ERROR] Could not create temporary directory" >&2
+		log $log_quiet "[ERROR] Could not create temporary directory" >&2
 		exit 1
 	}
 
-	log $LOG_NORMAL "[INFO] Extracting $SOURCE to $target_dir..."
+	log $log_normal "[INFO] Extracting $source to $target_dir..."
 
 	if [[ -z ${target_dir_flag:-} ]]; then
 		if [[ $dependency == "unzip" ]]; then
-			"$dependency" "$SOURCE" "$extract_flag" "$temp_dir" >/dev/null
+			"$dependency" "$source" "$extract_flag" "$temp_dir" >/dev/null
 		else
-			"$dependency" "$extract_flag" "$SOURCE" "$temp_dir" >/dev/null
+			"$dependency" "$extract_flag" "$source" "$temp_dir" >/dev/null
 		fi
 	else
 		if [[ $dependency == "7z" ]]; then
 			# 7z requires the output flag to be prepended to the target directory
 			# eg. 7z x file.7z -o/tmp/archive (notice no space between -o and the directory)
-			"$dependency" "$extract_flag" "$SOURCE" "$target_dir_flag""$temp_dir" >/dev/null
+			"$dependency" "$extract_flag" "$source" "$target_dir_flag""$temp_dir" >/dev/null
 		else
-			"$dependency" "$extract_flag" "$SOURCE" "$target_dir_flag" "$temp_dir" >/dev/null
+			"$dependency" "$extract_flag" "$source" "$target_dir_flag" "$temp_dir" >/dev/null
 		fi
 	fi
 
 	# Check exit status of the extraction command
 	local exit_code=$?
 	if ((exit_code != 0)); then
-		log $LOG_QUIET "[ERROR] Extraction failed with exit code $exit_code" >&2
+		log $log_quiet "[ERROR] Extraction failed with exit code $exit_code" >&2
 		exit 1
 	fi
 
-	log $LOG_VERBOSE "[INFO] Checking contents of the extracted directory: $temp_dir"
+	log $log_verbose "[INFO] Checking contents of the extracted directory: $temp_dir"
 
 	# Check if the contents are immediately inside a folder and move them accordingly
 	# Get basename
-	name=${SOURCE##*/}
+	name=${source##*/}
 
 	# Remove extension
 	name=${name%.archive_extension}
 	target="$target_dir/$name"
 
 	if (("$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" > 1)); then
-		log $LOG_VERBOSE "[INFO] Using archive name as target directory: $target"
-		log $LOG_VERBOSE "[INFO] Moving contents to target directory"
+		log $log_verbose "[INFO] Using archive name as target directory: $target"
+		log $log_verbose "[INFO] Moving contents to target directory"
 
 		mkdir -p "$target"
 		mv "$temp_dir"/* "$target"
 	else
-		log $LOG_VERBOSE "[INFO] Moving contents to target directory: $target_dir"
+		log $log_verbose "[INFO] Moving contents to target directory: $target_dir"
 		mv "$temp_dir"/* "$target_dir"
 	fi
 
 	# Remove the temporary directory
-	log $LOG_VERBOSE "[INFO] Removing temporary directory"
+	log $log_verbose "[INFO] Removing temporary directory"
 	rmdir "$temp_dir"
 
-	log $LOG_NORMAL "[INFO] Extraction complete: $target"
+	log $log_normal "[INFO] Extraction complete: $target"
 }
 
 run() {
 	local dependency list_flag extract_flag target_dir_flag
-	local archive_extension="${SOURCE##*.}"
+	local archive_extension="${source##*.}"
 
 	read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 
 	if ! command -v "$dependency" &>/dev/null; then
-		log $LOG_QUIET "[ERROR] $dependency is needed but not found." >&2
+		log $log_quiet "[ERROR] $dependency is needed but not found." >&2
 		exit 1
 	fi
 
-	if [[ $DRY == "y" ]]; then
+	if [[ $dry == "y" ]]; then
 		if [[ $LIST == "Y" ]]; then
-			log $LOG_NORMAL "[DRY] Would list contents of $SOURCE"
+			log $log_normal "[dry] Would list contents of $source"
 		else
-			log $LOG_NORMAL "[DRY] Would extract contents of $SOURCE"
+			log $log_normal "[dry] Would extract contents of $source"
 		fi
 	else
 		if [[ $LIST == "Y" ]]; then
-			log $LOG_NORMAL "[INFO] Listing contents of $SOURCE"
-			"$dependency" "$list_flag" "$SOURCE"
+			log $log_normal "[INFO] Listing contents of $source"
+			"$dependency" "$list_flag" "$source"
 		else
-			log $LOG_NORMAL "[INFO] Initiating extraction process."
+			log $log_normal "[INFO] Initiating extraction process."
 			extract_archive "$dependency" "$extract_flag" "$target_dir_flag"
 		fi
 	fi
@@ -442,10 +442,10 @@ run() {
 main() {
 	arg_parse "$@"
 
-	log $LOG_VERBOSE "[INFO] Checking source directory"
+	log $log_verbose "[INFO] Checking source directory"
 	check_source
 
-	log $LOG_VERBOSE "[INFO] Checking target directory"
+	log $log_verbose "[INFO] Checking target directory"
 	check_target
 
 	run

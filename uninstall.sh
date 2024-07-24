@@ -12,20 +12,20 @@
 set -uo pipefail
 
 # Log levels
-#LOG_SILENT=0
-LOG_QUIET=1
-LOG_NORMAL=2
-LOG_VERBOSE=3
-LOG=$LOG_NORMAL
+#log_silent=0
+log_quiet=1
+log_normal=2
+log_verbose=3
+log=$log_normal
 
-CONFIG_PATH="$HOME/.config/dsu"
-CONFIG_FILE="$CONFIG_PATH/dsu.conf"
-LOG_FILE="$CONFIG_PATH/dsu.log"
+config_path="$HOME/.config/dsu"
+config_file="$config_path/dsu.conf"
+log_file="$config_path/dsu.log"
 
-DRY="n"
-FORCE="ask"
+dry="n"
+force="ask"
 
-SUDO_COMMAND=""
+sudo_command=""
 
 usage() {
 	local name=${0##*/}
@@ -58,22 +58,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if ((LOG >= LOG_QUIET)); then
+			if ((log >= log_quiet)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if ((LOG >= LOG_NORMAL)); then
+			if ((log >= log_normal)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if ((LOG >= LOG_VERBOSE)); then
+			if ((log >= log_verbose)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
+			log $log_quiet "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -111,36 +111,36 @@ arg_parse() {
 				exit 0
 				;;
 			-d | --dry)
-				DRY="y"
+				dry="y"
 				shift
 				;;
 			-f | --force)
-				FORCE="$2"
+				force="$2"
 
-				if [[ ! $FORCE =~ ^(y|n|ask)$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid force mode: $FORCE" >&2
+				if [[ ! $force =~ ^(y|n|ask)$ ]]; then
+					log $log_quiet "[ERROR] Invalid force mode: $force" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-l | --log)
-				LOG="$2"
+				log="$2"
 
-				if [[ ! $LOG =~ ^[0-3]$ ]]; then
-					log $LOG_QUIET "[ERROR] Invalid log level: $LOG" >&2
+				if [[ ! $log =~ ^[0-3]$ ]]; then
+					log $log_quiet "[ERROR] Invalid log level: $log" >&2
 					exit 1
 				fi
 
 				shift 2
 				;;
 			-*)
-				log $LOG_QUIET "[ERROR] Unknown option: $1" >&2
+				log $log_quiet "[ERROR] Unknown option: $1" >&2
 				usage
 				exit 1
 				;;
 			*)
-				log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
+				log $log_quiet "[ERROR] Unknown argument: $1" >&2
 				usage
 				exit 1
 				;;
@@ -148,18 +148,18 @@ arg_parse() {
 	done
 
 	# Will only happen when on verbose mode
-	log $LOG_VERBOSE "[INFO] Running verbose log level"
+	log $log_verbose "[INFO] Running verbose log level"
 
-	if [[ "$FORCE" == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-	elif [[ "$FORCE" == "n" ]]; then
-		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
+	if [[ "$force" == "y" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
+	elif [[ "$force" == "n" ]]; then
+		log $log_verbose "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
 	else
-		log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
+		log $log_verbose "[INFO] Running interactive mode. Will prompt for confirmation."
 	fi
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
+	if [[ $dry == "y" ]]; then
+		log $log_verbose "[INFO] Running dry run mode. No changes will be made."
 	fi
 }
 
@@ -169,7 +169,7 @@ path_needs_sudo() {
 	while true; do
 		# Safeguard, prevent infinite loop
 		if [[ -z "$path" ]]; then
-			log $LOG_QUIET "[ERROR] Provided path is not valid: $1" >&2
+			log $log_quiet "[ERROR] Provided path is not valid: $1" >&2
 			exit 1
 		fi
 		if [[ "$path" == "/" ]]; then
@@ -195,24 +195,24 @@ path_needs_sudo() {
 }
 
 prompt_for_sudo() {
-	if [[ $FORCE == "y" ]]; then
-		log $LOG_VERBOSE "[INFO] Elevating permissions to continue installation."
-	elif [[ $FORCE == "n" ]]; then
-		log $LOG_NORMAL "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
+	if [[ $force == "y" ]]; then
+		log $log_verbose "[INFO] Elevating permissions to continue installation."
+	elif [[ $force == "n" ]]; then
+		log $log_normal "[INFO] Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			log $LOG_NORMAL "[INFO] Aborting..."
+			log $log_normal "[INFO] Aborting..."
 			exit 0
 		fi
 	fi
 
 	# Elevate permissions
 	sudo -v || {
-		log $LOG_QUIET "[ERROR] Failed to elevate permissions. Exiting..." >&2
+		log $log_quiet "[ERROR] Failed to elevate permissions. Exiting..." >&2
 		exit 1
 	}
 }
@@ -226,15 +226,15 @@ set_sudo_command() {
 	status=$?
 
 	if ((status != 0)); then
-		log $LOG_QUIET "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
+		log $log_quiet "[ERROR] Could not determine if sudo is needed. Exiting..." >&2
 		exit 1
 	fi
 
 	if [[ "$use_sudo" == "y" ]]; then
-		if [[ $DRY == "y" ]]; then
-			log $LOG_NORMAL "[DRY] Would use sudo to remove binaries from $path"
+		if [[ $dry == "y" ]]; then
+			log $log_normal "[dry] Would use sudo to remove binaries from $path"
 		else
-			SUDO_COMMAND="sudo"
+			sudo_command="sudo"
 			prompt_for_sudo
 		fi
 	fi
@@ -247,8 +247,8 @@ main() {
 
 	arg_parse "$@"
 
-	if [[ ! -e "$CONFIG_FILE" ]]; then
-		log $LOG_NORMAL "[INFO] Nothing to uninstall. Configuration file not found: $CONFIG_FILE"
+	if [[ ! -e "$config_file" ]]; then
+		log $log_normal "[INFO] Nothing to uninstall. Configuration file not found: $config_file"
 		exit 0
 	fi
 
@@ -266,48 +266,48 @@ main() {
 		elif [[ "$line" =~ ^[[:space:]] ]]; then
 			binaries+=("${line//[[:space:]]/}")
 		fi
-	done <"$CONFIG_FILE"
+	done <"$config_file"
 
 	if [[ -z "$type" ]] || [[ -z "$path" ]]; then
-		log $LOG_QUIET "[ERROR] Invalid configuration file: $CONFIG_FILE" >&2
+		log $log_quiet "[ERROR] Invalid configuration file: $config_file" >&2
 		exit 1
 	fi
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_NORMAL "[DRY] Would remove existing $type installation from $path"
+	if [[ $dry == "y" ]]; then
+		log $log_normal "[dry] Would remove existing $type installation from $path"
 	else
-		log $LOG_NORMAL "[INFO] Removing existing $type installation from $path..."
+		log $log_normal "[INFO] Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
 	for binary in "${binaries[@]}"; do
-		if [[ $DRY == "y" ]]; then
-			log $LOG_NORMAL "[DRY] Would remove binary: $path/$binary"
+		if [[ $dry == "y" ]]; then
+			log $log_normal "[dry] Would remove binary: $path/$binary"
 			continue
 		fi
 
-		log $LOG_VERBOSE "[INFO] Removing binary: $path/$binary"
-		$SUDO_COMMAND rm -f "$path/$binary" || {
-			log $LOG_QUIET "[ERROR] Failed to remove binary: $path/$binary" >&2
+		log $log_verbose "[INFO] Removing binary: $path/$binary"
+		$sudo_command rm -f "$path/$binary" || {
+			log $log_quiet "[ERROR] Failed to remove binary: $path/$binary" >&2
 			exit 1
 		}
 	done
 
-	if [[ $DRY == "y" ]]; then
-		log $LOG_NORMAL "[DRY] Would remove configuration file: $CONFIG_FILE"
-		log $LOG_NORMAL "[DRY] Would remove log file: $LOG_FILE"
-		log $LOG_NORMAL "[DRY] Would remove configuration directory: $CONFIG_PATH"
+	if [[ $dry == "y" ]]; then
+		log $log_normal "[dry] Would remove configuration file: $config_file"
+		log $log_normal "[dry] Would remove log file: $log_file"
+		log $log_normal "[dry] Would remove configuration directory: $config_path"
 	else
-		log $LOG_VERBOSE "[INFO] Removing configuration file: $CONFIG_FILE"
-		rm "$CONFIG_FILE" 2>/dev/null || true
+		log $log_verbose "[INFO] Removing configuration file: $config_file"
+		rm "$config_file" 2>/dev/null || true
 
-		log $LOG_VERBOSE "[INFO] Removing log file: $LOG_FILE"
-		rm "$LOG_FILE" 2>/dev/null || true
+		log $log_verbose "[INFO] Removing log file: $log_file"
+		rm "$log_file" 2>/dev/null || true
 
-		log $LOG_VERBOSE "[INFO] Removing configuration directory: $CONFIG_PATH"
-		rmdir "$CONFIG_PATH" 2>/dev/null || true
+		log $log_verbose "[INFO] Removing configuration directory: $config_path"
+		rmdir "$config_path" 2>/dev/null || true
 
-		log $LOG_NORMAL "[INFO] Uninstallation completed successfully."
+		log $log_normal "[INFO] Uninstallation completed successfully."
 	fi
 }
 
