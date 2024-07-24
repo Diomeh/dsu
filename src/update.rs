@@ -5,7 +5,7 @@ use version_compare::Version;
 
 impl Runnable for UpdateArgs {
     fn run(&mut self) -> Result<()> {
-        let url = "https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION";
+        let url = "https://raw.githubusercontent.com/Diomeh/dsu/master/version";
 
         let response = get(url)?;
 
@@ -16,7 +16,7 @@ impl Runnable for UpdateArgs {
         let remote_version = response.text()?;
         let remote_version = remote_version.trim();
         let remote_version = &remote_version[1..]; // Remove the 'v' prefix
-        let current_version = env!("CARGO_PKG_VERSION");
+        let current_version = env!("CARGO_PKG_version");
 
         let remote_version = Version::from(remote_version).unwrap();
         let current_version = Version::from(current_version).unwrap();
