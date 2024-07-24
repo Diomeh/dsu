@@ -58,22 +58,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [[ "$LOG" -ge $LOG_QUIET ]]; then
+			if ((LOG >= LOG_QUIET)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
+			if ((LOG >= LOG_NORMAL)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
+			if ((LOG >= LOG_VERBOSE)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			echo "[ERROR] Invalid log level: $level" >&2
+			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -82,7 +82,7 @@ log() {
 arg_parse() {
 	# Expand combined short options (e.g., -qy to -q -y)
 	expanded_args=()
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		# If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
 		if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
 			expanded_args+=("$1")
@@ -104,7 +104,7 @@ arg_parse() {
 	set -- "${expanded_args[@]}"
 
 	# Parse long arguments
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 			-h | --help)
 				usage

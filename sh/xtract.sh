@@ -130,7 +130,7 @@ check_version() {
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
-	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
 	if [[ "$remote_version" != "$VERSION" ]]; then
@@ -150,22 +150,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [[ "$LOG" -ge $LOG_QUIET ]]; then
+			if ((LOG >= LOG_QUIET)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
+			if ((LOG >= LOG_NORMAL)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
+			if ((LOG >= LOG_VERBOSE)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			echo "[ERROR] Invalid log level: $level" >&2
+			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -174,7 +174,7 @@ log() {
 arg_parse() {
 	# Expand combined short options (e.g., -qy to -q -y)
 	expanded_args=()
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		# If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
 		if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
 			expanded_args+=("$1")
@@ -196,7 +196,7 @@ arg_parse() {
 	set -- "${expanded_args[@]}"
 
 	# Parse long arguments
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 			-h | --help)
 				usage
@@ -259,7 +259,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	TARGET="${TARGET:-$(pwd)}"
+	${TARGET:=$(pwd)}
 
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
@@ -334,9 +334,10 @@ extract_archive() {
 	local extract_flag="$2"
 	local target_dir_flag="$3"
 	local target_dir="$TARGET"
+	local target name
 
 	if [[ $DRY == "y" ]]; then
-		if [[ "$LOG" == $LOG_VERBOSE ]]; then
+		if [[ "$LOG" == "$LOG_VERBOSE" ]]; then
 			log $LOG_VERBOSE "[DRY] Would create temporary directory"
 			log $LOG_VERBOSE "[DRY] Would extract $SOURCE to temporary directory"
 			log $LOG_VERBOSE "[DRY] Would move contents from temporary directory to target directory: $target_dir"
@@ -377,7 +378,7 @@ extract_archive() {
 
 	# Check exit status of the extraction command
 	local exit_code=$?
-	if [[ "$exit_code" -ne 0 ]]; then
+	if ((exit_code != 0)); then
 		log $LOG_QUIET "[ERROR] Extraction failed with exit code $exit_code" >&2
 		exit 1
 	fi
@@ -385,10 +386,14 @@ extract_archive() {
 	log $LOG_VERBOSE "[INFO] Checking contents of the extracted directory: $temp_dir"
 
 	# Check if the contents are immediately inside a folder and move them accordingly
-	local target
-	target="$target_dir/$(basename "$SOURCE" ."$archive_extension")"
+	# Get basename
+	name=${SOURCE##*/}
 
-	if [[ "$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" -gt 1 ]]; then
+	# Remove extension
+	name=${name%.archive_extension}
+	target="$target_dir/$name"
+
+	if (("$(find "$temp_dir" -maxdepth 1 -type d | wc -l)" > 1)); then
 		log $LOG_VERBOSE "[INFO] Using archive name as target directory: $target"
 		log $LOG_VERBOSE "[INFO] Moving contents to target directory"
 
@@ -432,7 +437,6 @@ run() {
 			extract_archive "$dependency" "$extract_flag" "$target_dir_flag"
 		fi
 	fi
-
 }
 
 main() {

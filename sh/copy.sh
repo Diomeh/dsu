@@ -51,7 +51,7 @@ check_version() {
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
-	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
 	if [[ "$remote_version" != "$VERSION" ]]; then
@@ -63,7 +63,7 @@ check_version() {
 }
 
 parse_args() {
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case $1 in
 			-h | --help)
 				usage

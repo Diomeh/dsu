@@ -94,7 +94,7 @@ check_version() {
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
-	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
 	if [[ "$remote_version" != "$VERSION" ]]; then
@@ -114,22 +114,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [[ "$LOG" -ge $LOG_QUIET ]]; then
+			if ((LOG >= LOG_QUIET)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
+			if ((LOG >= LOG_NORMAL)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
+			if ((LOG >= LOG_VERBOSE)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			echo "[ERROR] Invalid log level: $level" >&2
+			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -138,7 +138,7 @@ log() {
 arg_parse() {
 	# Expand combined short options (e.g., -qy to -q -y)
 	expanded_args=()
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		# If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
 		if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
 			expanded_args+=("$1")
@@ -160,7 +160,7 @@ arg_parse() {
 	set -- "${expanded_args[@]}"
 
 	# Parse long arguments
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 			-h | --help)
 				usage
@@ -219,7 +219,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	TARGET="${TARGET:-$(pwd)}"
+	${TARGET:=$(pwd)}
 
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
@@ -290,7 +290,7 @@ run() {
 	local filename
 	local timestamp
 
-	filename=$(basename "$SOURCE")
+	filename=${SOURCE##*/}
 	timestamp=$(date +%Y-%m-%d_%H-%M-%S)
 
 	local backup_path="$TARGET/$filename.$timestamp.bak"

@@ -14,6 +14,8 @@ set -uo pipefail
 VERSION="v2.1.30"
 app=${0##*/}
 
+dir=""
+
 usage() {
 	cat <<EOF
 Usage: $app <directory>
@@ -53,7 +55,7 @@ check_version() {
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
-	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
 	if [[ "$remote_version" != "$VERSION" ]]; then
@@ -65,7 +67,7 @@ check_version() {
 }
 
 parse_args() {
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case $1 in
 			-h | --help)
 				usage
@@ -80,7 +82,7 @@ parse_args() {
 				exit 0
 				;;
 			*)
-				if [[ -z "$dir" ] && [ -d "$1" ]]; then
+				if [[ -z "$dir" ]] && [[ -d "$1" ]]; then
 					dir="$1"
 				else
 					echo "[ERROR] Unknown option: $1" >&2
@@ -96,6 +98,6 @@ parse_args() {
 parse_args "$@"
 
 # Default to current directory if no directory is specified
-dir="${dir:-.}"
+${dir:=$(pwd)}
 
 du -s --one-file-system "$dir/*" "$dir/.[A-Za-z0-9]*" | sort -rn | head

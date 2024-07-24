@@ -23,12 +23,18 @@ EOF
 }
 
 make_tarball() {
-	local root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	local root_dir version filepath
 	local src_dir="$root_dir/sh"
 	local dist_dir="$root_dir/dist"
 	local bin_dir="$dist_dir/bin"
-	local version="$(cat "$root_dir/VERSION")"
 	local tarball_name="dsu-$version.tar.gz"
+
+	root_dir=${BASH_SOURCE[0]%/*}
+	if [[ -z "$root_dir" ]] || [[ "$root_dir" == "${BASH_SOURCE[0]}" ]]; then
+		root_dir="."
+	fi
+
+	version="$(cat "$root_dir/VERSION")"
 
 	# Check if source directory exists
 	if [[ ! -d "$src_dir" ]]; then
@@ -44,7 +50,7 @@ make_tarball() {
 	for file in "$src_dir"/*; do
 		cp "$file" "$bin_dir"
 
-		local filepath="$bin_dir/$(basename "$file")"
+		filepath="$bin_dir/${file##*/}"
 		chmod +x "$filepath"
 
 		# Remove extension from the file
@@ -63,7 +69,7 @@ make_tarball() {
 
 main() {
 	# Parse arguments
-	while [[ "$#" -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 			-h | --help)
 				usage

@@ -91,7 +91,7 @@ check_version() {
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
-	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
+	remote_version="${remote_version//[[:space:]]/}"
 
 	# Check if the remote version is different from the local version
 	if [[ "$remote_version" != "$VERSION" ]]; then
@@ -111,22 +111,22 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [[ "$LOG" -ge $LOG_QUIET ]]; then
+			if ((LOG >= LOG_QUIET)); then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
+			if ((LOG >= LOG_NORMAL)); then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
+			if ((LOG >= LOG_VERBOSE)); then
 				echo "$message"
 			fi
 			;;
 		*)
-			echo "[ERROR] Invalid log level: $level" >&2
+			log $LOG_QUIET "[ERROR] Invalid log level: $level" >&2
 			exit 1
 			;;
 	esac
@@ -135,7 +135,7 @@ log() {
 parse_args() {
 	# Expand combined short options (e.g., -dr to -d -r)
 	expanded_args=()
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		# If the argument is -- or does not start with -, or is a long argument (--dry), add it as is
 		if [[ $1 == -- || $1 != -* || ! $1 =~ ^-[^-].* ]]; then
 			expanded_args+=("$1")
@@ -156,7 +156,7 @@ parse_args() {
 	# Reset positional parameters to expanded arguments
 	set -- "${expanded_args[@]}"
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case $1 in
 			-h | --help)
 				usage
@@ -222,45 +222,53 @@ parse_args() {
 	done
 
 	# If no paths are provided, default to the current directory
-	if [[ ${#PATHS[@]} -eq 0 ]]; then
+	if ((${#PATHS[@]} == 0)); then
 		PATHS+=(".")
 	fi
 }
 
 replace_special_chars() {
 	local filepath="$1"
-	local filename
-	local newname
-	local target
+	local filename new_name target
 
 	# Extract filename without directory path
-	filename=$(basename "$filepath")
+	filename=${filepath##*/}
 
-	# Replace spaces with underscore and strip non-alphanumeric characters
-	newname=$(echo "$filename" | tr ' ' '_' | tr -s '_' | tr -cd '[:alnum:]_.-')
+	# Replace spaces with underscore
+	new_name=${new_name// /_}
 
-	# If newname is empty, skip
-	if [[ -z "$newname" ]]; then
+	# Replace multiple underscores with a single underscore
+	new_name=${new_name//__/_}
+
+	# Remove leading and trailing underscores
+	new_name=${new_name#_}
+	new_name=${new_name%_}
+
+	# Remove special characters
+	new_name=${new_name//[^[:alnum:]_.-]/}
+
+	# If new_name is empty, skip
+	if [[ -z "$new_name" ]]; then
 		log $LOG_NORMAL "[WARN] $filename: new name is empty. Skipping..." >&2
 		return
 	fi
 
-	target="$(dirname "$filepath")/$newname"
-
 	# If names are the same, skip
-	if [[ "$filename" == "$newname" ]]; then
+	if [[ "$filename" == "$new_name" ]]; then
 		log $LOG_VERBOSE "[INFO] $filename: No special characters found. Skipping..."
 		return
 	fi
 
+	target="${filepath%/*}/$new_name"
+
 	if [[ "$DRY" == "y" ]]; then
-		log $LOG_NORMAL "[DRY] Would rename: $filename -> $newname"
+		log $LOG_NORMAL "[DRY] Would rename: $filename -> $new_name"
 		if [[ -e "$target" ]]; then
 			log $LOG_NORMAL "[DRY] Would need to overwrite: $target"
 		fi
 		return 0
 	else
-		log $LOG_NORMAL "[INFO] Renaming: $filename -> $newname"
+		log $LOG_NORMAL "[INFO] Renaming: $filename -> $new_name"
 	fi
 
 	# Check if target file doesn't exists
@@ -300,7 +308,7 @@ process_paths() {
 			continue
 		fi
 
-		if [[ ! -r "$path" ] || [ ! -w "$path" ]]; then
+		if [[ ! -r "$path" ]] || [[ ! -w "$path" ]]; then
 			log $LOG_QUIET "[ERROR] $path: Permission denied" >&2
 			continue
 		fi
@@ -332,7 +340,7 @@ process_paths() {
 		log $LOG_VERBOSE "[INFO] Recursing into: $path"
 
 		# Recursively process directories
-		if [[ "$depth" -lt "$RECURSE_DEPTH" ]]; then
+		if ((depth < RECURSE_DEPTH)); then
 			for file in "$path"/*; do
 				if [[ -d "$file" ]]; then
 					process_paths "$((depth + 1))" "$file"
