@@ -13,7 +13,7 @@ set -uo pipefail
 
 IFS=$'\n\t'
 
-version="v2.1.31"
+version="v2.2.0"
 app=${0##*/}
 
 # Log levels

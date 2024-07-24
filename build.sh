@@ -25,7 +25,7 @@ EOF
 
 make_tarball() {
 	local version filepath filename tarball_name
-	local version_file="./version"
+	local version_file="./VERSION"
 	local src_dir="./sh"
 	local dist_dir="./dist"
 	local bin_dir="$dist_dir/bin"

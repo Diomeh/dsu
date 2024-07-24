@@ -16,7 +16,7 @@ impl Runnable for UpdateArgs {
         let remote_version = response.text()?;
         let remote_version = remote_version.trim();
         let remote_version = &remote_version[1..]; // Remove the 'v' prefix
-        let current_version = env!("CARGO_PKG_version");
+        let current_version = env!("CARGO_PKG_VERSION");
 
         let remote_version = Version::from(remote_version).unwrap();
         let current_version = Version::from(current_version).unwrap();

@@ -407,8 +407,8 @@ build_rust_cli() {
 	# Attempt to build the binary. Write output to log file
 	cargo build --release >"$log_file" 2>&1 || {
 		log $log_error "Failed to build Rust CLI binary." >&2
-		log $log_quiet "[INFO] Check the log file for more information: $log_file" >&2
-		log $log_quiet "[INFO] For more information check log file: $log_file" >&2
+		log $log_error "Check the log file for more information: $log_file" >&2
+		log $log_error "For more information check log file: $log_file" >&2
 		tail "$log_file" >&2
 		exit 1
 	}
@@ -437,11 +437,11 @@ install_rust_cli() {
 	log $log_verbose "Creating installation directory: $install_dir"
 
 	$sudo_command mkdir -p "$install_dir" || {
-		log $log_quiet "Could not create installation directory: $install_dir" >&2
+		log $log_error "Could not create installation directory: $install_dir" >&2
 		exit 1
 	}
 
-	log $log_quiet "[INFO] Installing binary to installation directory: $install_dir"
+	log $log_error "Installing binary to installation directory: $install_dir"
 
 	$sudo_command install -m 755 "$cli_src" "$install_dir" || {
 		echo "Failed to install binary to installation directory: $install_dir" >&2
@@ -627,7 +627,7 @@ pre_install() {
 		$log_info "Previous installation found. Removing..."
 		remove_previous_install
 	elif [[ $force == "n" ]]; then
-		log $log_quiet "Previous installation found. Exiting..."
+		log $log_error "Previous installation found. Exiting..."
 		exit 0
 	else
 		echo "Looks like dsu is already installed. Proceeding will remove the existing installation."

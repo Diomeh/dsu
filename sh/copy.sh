@@ -11,7 +11,7 @@
 
 set -uo pipefail
 
-version="v2.1.30"
+version="v2.2.0"
 app=${0##*/}
 
 usage() {
