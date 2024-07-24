@@ -219,7 +219,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${TARGET:=$(pwd)}
+	${TARGET:=.}
 
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
@@ -287,13 +287,11 @@ prepare_target() {
 }
 
 run() {
-	local filename
-	local timestamp
+	local filename timestamp backup_path
 
 	filename=${SOURCE##*/}
 	timestamp=$(date +%Y-%m-%d_%H-%M-%S)
-
-	local backup_path="$TARGET/$filename.$timestamp.bak"
+	backup_path="$TARGET/$filename.$timestamp.bak"
 
 	log $LOG_VERBOSE "[INFO] Creating file backup: $SOURCE"
 	log $LOG_VERBOSE "[INFO] To backup target: $backup_path"
@@ -333,10 +331,8 @@ run() {
 
 main() {
 	arg_parse "$@"
-
 	prepare_source
 	prepare_target
-
 	run
 }
 

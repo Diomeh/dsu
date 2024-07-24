@@ -259,7 +259,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${TARGET:=$(pwd)}
+	${TARGET:=.}
 
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
@@ -330,11 +330,11 @@ check_target() {
 }
 
 extract_archive() {
+	local target name
 	local dependency="$1"
 	local extract_flag="$2"
 	local target_dir_flag="$3"
 	local target_dir="$TARGET"
-	local target name
 
 	if [[ $DRY == "y" ]]; then
 		if [[ "$LOG" == "$LOG_VERBOSE" ]]; then
@@ -412,8 +412,8 @@ extract_archive() {
 }
 
 run() {
-	local archive_extension="${SOURCE##*.}"
 	local dependency list_flag extract_flag target_dir_flag
+	local archive_extension="${SOURCE##*.}"
 
 	read -r dependency list_flag extract_flag target_dir_flag <<<"${archive_types[$archive_extension]}"
 

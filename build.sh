@@ -23,22 +23,25 @@ EOF
 }
 
 make_tarball() {
-	local root_dir version filepath
-	local src_dir="$root_dir/sh"
-	local dist_dir="$root_dir/dist"
+	local version filepath filename tarball_name
+	local version_file="./VERSION"
+	local src_dir="./sh"
+	local dist_dir="./dist"
 	local bin_dir="$dist_dir/bin"
-	local tarball_name="dsu-$version.tar.gz"
 
-	root_dir=${BASH_SOURCE[0]%/*}
-	if [[ -z "$root_dir" ]] || [[ "$root_dir" == "${BASH_SOURCE[0]}" ]]; then
-		root_dir="."
+	if [[ ! -f "$version_file" ]]; then
+		echo "Error: VERSION file not found" >&2
+		echo "Are you in the correct directory?" >&2
+		exit 1
 	fi
 
-	version="$(cat "$root_dir/VERSION")"
+	version=$(<"$version_file")
+	tarball_name="dsu-$version.tar.gz"
 
 	# Check if source directory exists
 	if [[ ! -d "$src_dir" ]]; then
 		echo "Error: Source directory '$src_dir' not found" >&2
+		echo "Are you in the correct directory?" >&2
 		exit 1
 	fi
 
@@ -54,7 +57,7 @@ make_tarball() {
 		chmod +x "$filepath"
 
 		# Remove extension from the file
-		local filename="${filepath%.*}"
+		filename="${filepath%.*}"
 		mv "$filepath" "$filename"
 	done
 

@@ -219,7 +219,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${TARGET:=$(pwd)}
+	${TARGET:=.}
 
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
@@ -287,8 +287,8 @@ prepare_target() {
 }
 
 run() {
-	local target_path="$TARGET"
 	local target_file
+	local target_path="$TARGET"
 
 	# Check if the file name matches the backup pattern: file.2019-01-01_00-00-00.bak
 	if [[ "${SOURCE##*/}" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.bak$ ]]; then

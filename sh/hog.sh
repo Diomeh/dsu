@@ -98,6 +98,6 @@ parse_args() {
 parse_args "$@"
 
 # Default to current directory if no directory is specified
-${dir:=$(pwd)}
+${dir:=.}
 
 du -s --one-file-system "$dir/*" "$dir/.[A-Za-z0-9]*" | sort -rn | head

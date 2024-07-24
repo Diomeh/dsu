@@ -228,8 +228,8 @@ parse_args() {
 }
 
 replace_special_chars() {
-	local filepath="$1"
 	local filename new_name target
+	local filepath="$1"
 
 	# Extract filename without directory path
 	filename=${filepath##*/}
@@ -314,7 +314,7 @@ process_paths() {
 		fi
 
 		log $LOG_VERBOSE "[INFO] Processing directory: $path"
-		if [[ "$RECURSE_DEPTH" -gt 0 ]]; then
+		if (( RECURSE_DEPTH > 0 )); then
 			log $LOG_VERBOSE "[INFO] Recurse depth: $depth of $RECURSE_DEPTH"
 		else
 			log $LOG_VERBOSE "[INFO] Recurse depth: $depth"

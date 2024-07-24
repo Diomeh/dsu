@@ -254,9 +254,8 @@ prompt_for_sudo() {
 }
 
 set_sudo_command() {
+	local use_sudo status
 	local path="$1"
-	local use_sudo
-	local status
 
 	use_sudo="$(path_needs_sudo "$path")"
 	status=$?
