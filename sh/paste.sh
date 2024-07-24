@@ -57,7 +57,7 @@ check_version() {
 	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
 
 	# Check if the remote version is different from the local version
-	if [ "$remote_version" != "$VERSION" ]; then
+	if [[ "$remote_version" != "$VERSION" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -92,7 +92,7 @@ parse_args() {
 parse_args "$@"
 
 # Determine if user is running Wayland or Xorg
-if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+if [[ "$XDG_SESSION_TYPE" = "wayland" ]]; then
 	# Check if wl-paste is installed
 	if ! command -v wl-paste >/dev/null; then
 		echo "[ERROR] wl-paste is not installed" >&2
@@ -101,7 +101,7 @@ if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
 
 	# Paste clipboard contents to stdin
 	wl-paste
-elif [ "$XDG_SESSION_TYPE" = "x11" ]; then
+elif [[ "$XDG_SESSION_TYPE" = "x11" ]]; then
 	# Check if xclip is installed
 	if ! command -v xclip >/dev/null; then
 		echo "[ERROR] xclip is not installed" >&2

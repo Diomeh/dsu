@@ -56,7 +56,7 @@ check_version() {
 	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
 
 	# Check if the remote version is different from the local version
-	if [ "$remote_version" != "$VERSION" ]; then
+	if [[ "$remote_version" != "$VERSION" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -80,7 +80,7 @@ parse_args() {
 				exit 0
 				;;
 			*)
-				if [ -z "$dir" ] && [ -d "$1" ]; then
+				if [[ -z "$dir" ] && [ -d "$1" ]]; then
 					dir="$1"
 				else
 					echo "[ERROR] Unknown option: $1" >&2

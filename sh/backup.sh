@@ -97,7 +97,7 @@ check_version() {
 	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
 
 	# Check if the remote version is different from the local version
-	if [ "$remote_version" != "$VERSION" ]; then
+	if [[ "$remote_version" != "$VERSION" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -114,17 +114,17 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [ "$LOG" -ge $LOG_QUIET ]; then
+			if [[ "$LOG" -ge $LOG_QUIET ]]; then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [ "$LOG" -ge $LOG_NORMAL ]; then
+			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [ "$LOG" -ge $LOG_VERBOSE ]; then
+			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
 				echo "$message"
 			fi
 			;;
@@ -204,9 +204,9 @@ arg_parse() {
 				exit 1
 				;;
 			*)
-				if [ -z "$SOURCE" ]; then
+				if [[ -z "$SOURCE" ]]; then
 					SOURCE="$1"
-				elif [ -z "$TARGET" ]; then
+				elif [[ -z "$TARGET" ]]; then
 					TARGET="$1"
 				else
 					log $LOG_QUIET "[ERROR] Unknown argument: $1" >&2
@@ -224,31 +224,31 @@ arg_parse() {
 	# Will only happen when on verbose mode
 	log $LOG_VERBOSE "[INFO] Running verbose log level"
 
-	if [ "$FORCE" == "y" ]; then
+	if [[ "$FORCE" == "y" ]]; then
 		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'yes' for all prompts."
-	elif [ "$FORCE" == "n" ]; then
+	elif [[ "$FORCE" == "n" ]]; then
 		log $LOG_VERBOSE "[INFO] Running non-interactive mode. Assuming 'no' for all prompts."
 	else
 		log $LOG_VERBOSE "[INFO] Running interactive mode. Will prompt for confirmation."
 	fi
 
-	if [ $DRY == "y" ]; then
+	if [[ $DRY == "y" ]]; then
 		log $LOG_VERBOSE "[INFO] Running dry run mode. No changes will be made."
 	fi
 }
 
 prepare_source() {
-	if [ ! -e "$SOURCE" ]; then
+	if [[ ! -e "$SOURCE" ]]; then
 		log $LOG_QUIET "[ERROR] Source not found: $SOURCE" >&2
 		exit 1
-	elif [ ! -r "$SOURCE" ]; then
+	elif [[ ! -r "$SOURCE" ]]; then
 		log $LOG_QUIET "[ERROR] Permission denied: $SOURCE" >&2
 		exit 1
 	fi
 }
 
 prepare_target() {
-	if [ ! -e "$TARGET" ]; then
+	if [[ ! -e "$TARGET" ]]; then
 		if [[ $DRY == "y" ]]; then
 			log $LOG_NORMAL "[DRY] Would create backup directory: $TARGET"
 			return
@@ -277,10 +277,10 @@ prepare_target() {
 				}
 			fi
 		fi
-	elif [ ! -d "$TARGET" ]; then
+	elif [[ ! -d "$TARGET" ]]; then
 		log $LOG_QUIET "[ERROR] Not a directory: $TARGET" >&2
 		exit 1
-	elif [ ! -w "$TARGET" ]; then
+	elif [[ ! -w "$TARGET" ]]; then
 		log $LOG_QUIET "[ERROR] Permission denied: $TARGET" >&2
 		exit 1
 	fi
@@ -298,13 +298,13 @@ run() {
 	log $LOG_VERBOSE "[INFO] Creating file backup: $SOURCE"
 	log $LOG_VERBOSE "[INFO] To backup target: $backup_path"
 
-	if [ -e "$backup_path" ]; then
-		if [ $DRY == "y" ]; then
+	if [[ -e "$backup_path" ]]; then
+		if [[ $DRY == "y" ]]; then
 			log $LOG_NORMAL "[DRY] Would remove existing backup: $backup_path"
-		elif [ "$FORCE" == "y" ]; then
+		elif [[ "$FORCE" == "y" ]]; then
 			log $LOG_VERBOSE "[INFO] Removing existing backup: $backup_path"
 			rm -rf "$backup_path"
-		elif [ "$FORCE" == "n" ]; then
+		elif [[ "$FORCE" == "n" ]]; then
 			log $LOG_NORMAL "[INFO] Backup target already exists: $backup_path. Exiting..."
 			exit 0
 		else
@@ -317,11 +317,11 @@ run() {
 		fi
 	fi
 
-	if [ $DRY == "y" ]; then
+	if [[ $DRY == "y" ]]; then
 		log $LOG_NORMAL "[DRY] Would create backup: $backup_path"
 	else
 		# create the backup
-		if [ -d "$SOURCE" ]; then
+		if [[ -d "$SOURCE" ]]; then
 			cp -r "$SOURCE" "$backup_path"
 		else
 			cp "$SOURCE" "$backup_path"

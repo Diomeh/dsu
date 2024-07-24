@@ -94,7 +94,7 @@ check_version() {
 	remote_version="$(echo -e "${remote_version}" | tr -d '[:space:]')"
 
 	# Check if the remote version is different from the local version
-	if [ "$remote_version" != "$VERSION" ]; then
+	if [[ "$remote_version" != "$VERSION" ]]; then
 		echo "[INFO] A new version of $app ($remote_version) is available!"
 		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
@@ -111,17 +111,17 @@ log() {
 			# Silent mode. No output
 			;;
 		1)
-			if [ "$LOG" -ge $LOG_QUIET ]; then
+			if [[ "$LOG" -ge $LOG_QUIET ]]; then
 				echo "$message"
 			fi
 			;;
 		2)
-			if [ "$LOG" -ge $LOG_NORMAL ]; then
+			if [[ "$LOG" -ge $LOG_NORMAL ]]; then
 				echo "$message"
 			fi
 			;;
 		3)
-			if [ "$LOG" -ge $LOG_VERBOSE ]; then
+			if [[ "$LOG" -ge $LOG_VERBOSE ]]; then
 				echo "$message"
 			fi
 			;;
@@ -222,7 +222,7 @@ parse_args() {
 	done
 
 	# If no paths are provided, default to the current directory
-	if [ ${#PATHS[@]} -eq 0 ]; then
+	if [[ ${#PATHS[@]} -eq 0 ]]; then
 		PATHS+=(".")
 	fi
 }
@@ -240,7 +240,7 @@ replace_special_chars() {
 	newname=$(echo "$filename" | tr ' ' '_' | tr -s '_' | tr -cd '[:alnum:]_.-')
 
 	# If newname is empty, skip
-	if [ -z "$newname" ]; then
+	if [[ -z "$newname" ]]; then
 		log $LOG_NORMAL "[WARN] $filename: new name is empty. Skipping..." >&2
 		return
 	fi
@@ -248,14 +248,14 @@ replace_special_chars() {
 	target="$(dirname "$filepath")/$newname"
 
 	# If names are the same, skip
-	if [ "$filename" == "$newname" ]; then
+	if [[ "$filename" == "$newname" ]]; then
 		log $LOG_VERBOSE "[INFO] $filename: No special characters found. Skipping..."
 		return
 	fi
 
-	if [ "$DRY" == "y" ]; then
+	if [[ "$DRY" == "y" ]]; then
 		log $LOG_NORMAL "[DRY] Would rename: $filename -> $newname"
-		if [ -e "$target" ]; then
+		if [[ -e "$target" ]]; then
 			log $LOG_NORMAL "[DRY] Would need to overwrite: $target"
 		fi
 		return 0
@@ -264,15 +264,15 @@ replace_special_chars() {
 	fi
 
 	# Check if target file doesn't exists
-	if ! [ -e "$target" ]; then
+	if ! [[ -e "$target" ]]; then
 		mv "$filepath" "$target"
 		return 0
 	fi
 
-	if [ "$FORCE" == "y" ]; then
+	if [[ "$FORCE" == "y" ]]; then
 		log $LOG_VERBOSE "[INFO] Overwriting: $target"
 		rm -rf "$target"
-	elif [ "$FORCE" == "n" ]; then
+	elif [[ "$FORCE" == "n" ]]; then
 		log $LOG_NORMAL "[INFO] File exists. Skipping...: $filename"
 		return 0
 	else
@@ -295,31 +295,31 @@ process_paths() {
 	local paths=("$@")
 
 	for path in "${paths[@]}"; do
-		if [ ! -e "$path" ]; then
+		if [[ ! -e "$path" ]]; then
 			log $LOG_QUIET "[ERROR] $path: No such file or directory" >&2
 			continue
 		fi
 
-		if [ ! -r "$path" ] || [ ! -w "$path" ]; then
+		if [[ ! -r "$path" ] || [ ! -w "$path" ]]; then
 			log $LOG_QUIET "[ERROR] $path: Permission denied" >&2
 			continue
 		fi
 
 		log $LOG_VERBOSE "[INFO] Processing directory: $path"
-		if [ "$RECURSE_DEPTH" -gt 0 ]; then
+		if [[ "$RECURSE_DEPTH" -gt 0 ]]; then
 			log $LOG_VERBOSE "[INFO] Recurse depth: $depth of $RECURSE_DEPTH"
 		else
 			log $LOG_VERBOSE "[INFO] Recurse depth: $depth"
 		fi
 
 		# Process single file
-		if [ -f "$path" ]; then
+		if [[ -f "$path" ]]; then
 			replace_special_chars "$path"
 			continue
 		fi
 
 		# Process all files in the directory
-		if [ "$RECURSE" != "y" ]; then
+		if [[ "$RECURSE" != "y" ]]; then
 			for file in "$path"/*; do
 				replace_special_chars "$file"
 			done
@@ -332,9 +332,9 @@ process_paths() {
 		log $LOG_VERBOSE "[INFO] Recursing into: $path"
 
 		# Recursively process directories
-		if [ "$depth" -lt "$RECURSE_DEPTH" ]; then
+		if [[ "$depth" -lt "$RECURSE_DEPTH" ]]; then
 			for file in "$path"/*; do
-				if [ -d "$file" ]; then
+				if [[ -d "$file" ]]; then
 					process_paths "$((depth + 1))" "$file"
 				else
 					replace_special_chars "$file"

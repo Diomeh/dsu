@@ -31,7 +31,7 @@ make_tarball() {
 	local tarball_name="dsu-$version.tar.gz"
 
 	# Check if source directory exists
-	if [ ! -d "$src_dir" ]; then
+	if [[ ! -d "$src_dir" ]]; then
 		echo "Error: Source directory '$src_dir' not found" >&2
 		exit 1
 	fi
