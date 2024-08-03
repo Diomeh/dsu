@@ -62,6 +62,7 @@ test_backup() {
 	local r_file="r.txt.2024-06-06_17-47-45.backup"
 	local b_file="b.txt"
 	local result
+	local file
 
 	print "i" "backup: running tests"
 
@@ -82,7 +83,7 @@ test_backup() {
 	fi
 
 	# Verify if file with format b.txt.YYYY-MM-DD_HH-MM-SS.backup exists
-	local file="$(find "$workdir" -name "b.txt.*.backup")"
+	file="$(find "$workdir" -name "b.txt.*.backup")"
 	if [ -z "$file" ]; then
 		print "e" "backup: backup operation failed to create target file"
 		print "i" "backup: test output:"
@@ -144,6 +145,9 @@ test_cln() {
 	local workdirtmp="$TMP_DIR/cln"
 	local binary="$SRC_DIR/cln.sh"
 	local outfile="$TMP_DIR/cln.out"
+	local tmpexp
+	local tmpout
+	local exit_code
 
 	# Make a copy of the test directory
 	# Needed to avoid modifying the original test files
@@ -160,7 +164,7 @@ test_cln() {
 	}
 
 	"$binary" >"$outfile"
-	local exit_code=$?
+	exit_code=$?
 
 	# Check the exit code of the script
 	if [ "$exit_code" -ne 0 ]; then
@@ -171,11 +175,11 @@ test_cln() {
 	fi
 
 	# Remove lines with "valid" from the expected file to check for no args execution
-	local tmpexp=$(mktemp)
+	tmpexp=$(mktemp)
 	grep -v "valid" "$workdir/.expected" >"$tmpexp"
 
 	# Get all files in the test directory and remove the expected and valid files
-	local tmpout=$(mktemp)
+	tmpout=$(mktemp)
 	find "$workdirtmp" -type f -exec basename {} \; | grep -Ev "expected|valid" | sort >"$tmpout"
 
 	# Compare .expected file with the output file
@@ -244,7 +248,7 @@ test_hog() {
 	print "i" "hog: running test"
 
 	# Execute hog.sh and redirect output to a file
-	"$SRC_DIR/hog.sh" "./hog" | egrep --invert-match expected >"$TMP_DIR/hog.out"
+	"$SRC_DIR/hog.sh" "./hog" | grep -E --invert-match expected >"$TMP_DIR/hog.out"
 
 	# Compare output files and count differences
 	result=$(diff -qw "$TMP_DIR/hog.out" "$TEST_DIR/hog/.expected" | wc -l)
@@ -261,7 +265,7 @@ test_hog() {
 		cat "$TMP_DIR/hog.out"
 	fi
 
-	return $result
+	return "$result"
 }
 
 test_paste() {
@@ -273,6 +277,7 @@ test_xtract() {
 	local binary="$SRC_DIR/xtract.sh"
 	local outfile="$TMP_DIR/xtract.out"
 	local workdirtmp="$TMP_DIR/xtract"
+	local result
 
 	print "i" "xtract: running tests"
 
@@ -287,14 +292,14 @@ test_xtract() {
 	}
 
 	# Read archives list to avoid iterating over the .expected file or directories
-	local archives=($(find . -maxdepth 1 -type f ! -name "*.expected" -exec basename {} \;))
+	local archives=("$(find . -maxdepth 1 -type f ! -name "*.expected" -exec basename {} \;)")
 
 	# Iterate over each compressed file in the test directory
 	for archive in "${archives[@]}"; do
 		print "i" "xtract: testing $archive"
 
 		# Extract the archive using the script, rewrite output file discarding previous content
-		"$binary" "$archive" 2>&1 >"$outfile"
+		"$binary" "$archive" >"$outfile" 2>&1
 		local exit_code=$?
 
 		# Check the exit code of the script
