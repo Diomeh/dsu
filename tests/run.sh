@@ -59,7 +59,6 @@ test_backup() {
 	local workdir="$TEST_DIR/backup"
 	local binary="$SRC_DIR/backup.sh"
 	local outfile="$TMP_DIR/backup.out"
-	local r_file="r.txt.2024-06-06_17-47-45.backup"
 	local b_file="b.txt"
 	local result
 	local file
@@ -68,10 +67,8 @@ test_backup() {
 
 	touch "$outfile"
 
-	print "i" "backup: testing backup operation"
-
-	# Perform -b operation, get script exit code and redirect output to a file
-	"$binary" "-b" "./backup/$b_file" "./backup" >>"$outfile"
+	# Perform operation, get script exit code and redirect output to a file
+	"$binary" "$workdir/$b_file" "$workdir" >>"$outfile"
 	local b_exit_code=$?
 
 	# Check the exit code of the backup operation
@@ -89,55 +86,21 @@ test_backup() {
 		print "i" "backup: test output:"
 		cat "$outfile"
 		return 1
-	else
-		# Compare the backup file with the original file
-		result=$(diff -qw "$file" "$workdir/$b_file" | wc -l)
-		if [ "$result" -ne 0 ]; then
-			print "e" "backup: backup file does not match original file"
-			print "i" "backup: test output:"
-			cat "$outfile"
-			return 1
-		else
-			print "s" "backup: backup operation passed"
-			rm "$file"
-		fi
 	fi
 
-	print "i" "backup: testing restore operation"
-
-	# Perform -r operation
-	"$binary" "-r" "./backup/$r_file" "./backup" >>"$outfile"
-	local r_exit_code=$?
-
-	# Check the exit code of the restore operation
-	if [ "$r_exit_code" -ne 0 ]; then
-		print "e" "backup: test failed during restore operation with exit code $r_exit_code"
-		print "i" "backup: test output:"
-		cat "$outfile"
-		return 1
-	fi
-
-	# Verify the restored file exists
-	if [ ! -e "$workdir/r.txt" ]; then
-		print "e" "backup: restore operation failed to create target file"
+	# Compare the backup file with the original file
+	result=$(diff -qw "$file" "$workdir/$b_file" | wc -l)
+	if [ "$result" -ne 0 ]; then
+		print "e" "backup: backup file does not match original file"
 		print "i" "backup: test output:"
 		cat "$outfile"
 		return 1
 	else
-		# Compare the restored file with the original file
-		result=$(diff -qw "$workdir/r.txt" "$workdir/$r_file" | wc -l)
-		if [ "$result" -ne 0 ]; then
-			print "e" "backup: restored file does not match original file"
-			print "i" "backup: test output:"
-			cat "$outfile"
-			return 1
-		else
-			print "s" "backup: restore operation passed"
-			rm "$workdir/r.txt"
-		fi
+		print "s" "backup: backup operation passed"
+		rm "$file"
 	fi
 
-	print "s" "backup: all tests passed"
+	print "s" "backup: all tests finished"
 }
 
 test_cln() {
@@ -272,6 +235,49 @@ test_paste() {
 	print "w" "paste: test not implemented"
 }
 
+test_restore() {
+	local workdir="$TEST_DIR/backup"
+	local binary="$SRC_DIR/backup.sh"
+	local outfile="$TMP_DIR/backup.out"
+	local r_file="r.txt.2024-06-06_17-47-45.backup"
+	local result
+	local file
+
+	# Perform operation, get script exit code and redirect output to a file
+	"$binary" "$workdir/$r_file" "$workdir" >>"$outfile"
+	local r_exit_code=$?
+
+	# Check the exit code of the restore operation
+	if [ "$r_exit_code" -ne 0 ]; then
+		print "e" "backup: test failed during restore operation with exit code $r_exit_code"
+		print "i" "backup: test output:"
+		cat "$outfile"
+		return 1
+	fi
+
+	# Verify the restored file exists
+	if [ ! -e "$workdir/r.txt" ]; then
+		print "e" "backup: restore operation failed to create target file"
+		print "i" "backup: test output:"
+		cat "$outfile"
+		return 1
+	fi
+
+	# Compare the restored file with the original file
+	result=$(diff -qw "$workdir/r.txt" "$workdir/$r_file" | wc -l)
+	if [ "$result" -ne 0 ]; then
+		print "e" "backup: restored file does not match original file"
+		print "i" "backup: test output:"
+		cat "$outfile"
+		return 1
+	else
+		print "s" "backup: restore operation passed"
+		rm "$workdir/r.txt"
+	fi
+
+	print "s" "backup: all tests finished"
+}
+
 test_xtract() {
 	local workdir="$TEST_DIR/xtract"
 	local binary="$SRC_DIR/xtract.sh"
@@ -330,7 +336,7 @@ test_xtract() {
 	rm -rf "$workdirtmp"
 
 	# Compare output files and count differences
-	local result=$(diff -qw "$outfile" "$workdir/.expected" | wc -l)
+	result=$(diff -qw "$outfile" "$workdir/.expected" | wc -l)
 
 	if [ "$result" -ne 0 ]; then
 		print "e" "xtract: test failed"
@@ -355,6 +361,7 @@ main() {
 	test_copy
 	test_hog
 	test_paste
+	test_restore
 	test_xtract
 
 	rm -rf "$TMP_DIR"
