@@ -11,7 +11,7 @@
 
 set -uo pipefail
 
-version="v2.2.0"
+version="v2.2.8"
 app=${0##*/}
 
 dir=""
