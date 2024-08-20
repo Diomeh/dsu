@@ -282,7 +282,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${target:=.}
+	target="${target:-.}"
 
 	# Will only happen when on verbose mode
 	log $log_verbose "Running verbose log level"
@@ -353,7 +353,7 @@ check_target() {
 }
 
 extract_archive() {
-	local target name
+	local name
 	local dependency="$1"
 	local extract_flag="$2"
 	local target_dir_flag="$3"
