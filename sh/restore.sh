@@ -124,7 +124,7 @@ log() {
 	)
 
 	#	 Assert log level is valid
-	((level >= 0 && level <= 4)) || {
+	((level >= 0 && level <= 5)) || {
 		log $log_warn "Invalid log level: $level" >&2
 		return
 	}
