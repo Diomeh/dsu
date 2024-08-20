@@ -282,7 +282,7 @@ prepare_target() {
 			read -p "[WARN] Backup directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				$log_info "Exiting..."
+				log $log_info "Exiting..."
 				exit 0
 			else
 				log $log_verbose "Creating backup directory: $target"
@@ -318,7 +318,7 @@ run() {
 			log $log_verbose "Removing existing backup: $backup_path"
 			rm -rf "$backup_path"
 		elif [[ "$force" == "n" ]]; then
-			$log_info "Backup target already exists: $backup_path. Exiting..."
+			log $log_info "Backup target already exists: $backup_path. Exiting..."
 			exit 0
 		else
 			log $log_warn "Backup target already exists: $backup_path"
@@ -340,7 +340,7 @@ run() {
 			cp "$source" "$backup_path"
 		fi
 
-		$log_info "Created backup: $backup_path"
+		log $log_info "Created backup: $backup_path"
 	fi
 }
 

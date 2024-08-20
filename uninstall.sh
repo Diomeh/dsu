@@ -197,14 +197,14 @@ prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
 		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
+		log $log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -247,7 +247,7 @@ main() {
 	arg_parse "$@"
 
 	if [[ ! -e "$config_file" ]]; then
-		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
+		log $log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		exit 0
 	fi
 
@@ -275,7 +275,7 @@ main() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would remove existing $type installation from $path"
 	else
-		$log_info "Removing existing $type installation from $path..."
+		log $log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
@@ -306,7 +306,7 @@ main() {
 		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		$log_info "Uninstallation completed successfully."
+		log $log_info "Uninstallation completed successfully."
 	fi
 }
 

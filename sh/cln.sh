@@ -302,13 +302,13 @@ replace_special_chars() {
 		log $log_verbose "Overwriting: $target"
 		rm -rf "$target"
 	elif [[ "$force" == "n" ]]; then
-		$log_info "File exists. Skipping...: $filename"
+		log $log_info "File exists. Skipping...: $filename"
 		return 0
 	else
 		read -p "File already exists. Overwrite? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Skipping $filename..."
+			log $log_info "Skipping $filename..."
 			return 0
 		else
 			rm -rf "$target" # Remove the existing file before renaming

@@ -258,14 +258,14 @@ prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
 		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
+		log $log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -397,7 +397,7 @@ build_rust_cli() {
 		read -p "Rust CLI binary not found. Do you want to build it now? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -420,7 +420,7 @@ install_rust_cli() {
 	config["type"]="rust"
 
 	set_install_path
-	$log_info "Installing Rust CLI binary..."
+	log $log_info "Installing Rust CLI binary..."
 
 	# Do we have the dsu binary?
 	if [[ ! -e "$cli_src" ]]; then
@@ -449,7 +449,7 @@ install_rust_cli() {
 	}
 
 	config_binaries+=("${cli_src##*/}")
-	$log_info "Binary installed successfully to: $install_dir"
+	log $log_info "Binary installed successfully to: $install_dir"
 }
 
 build_bash_scripts() {
@@ -502,7 +502,7 @@ install_bash_scripts() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would install standalone bash scripts"
 	else
-		$log_info "Installing standalone bash scripts..."
+		log $log_info "Installing standalone bash scripts..."
 	fi
 
 	# Do we have the tarball with the scripts?
@@ -549,7 +549,7 @@ install_bash_scripts() {
 	log $log_verbose "Cleaning up temporary directory: $tmp_dir"
 	rm -rf "$tmp_dir"
 
-	$log_info "Bash scripts installed successfully to: $install_dir"
+	log $log_info "Bash scripts installed successfully to: $install_dir"
 }
 
 remove_previous_install() {
@@ -581,7 +581,7 @@ remove_previous_install() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would remove existing $type installation from $path"
 	else
-		$log_info "Removing existing $type installation from $path..."
+		log $log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
@@ -612,19 +612,19 @@ remove_previous_install() {
 		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		$log_info "Uninstallation completed successfully."
+		log $log_info "Uninstallation completed successfully."
 	fi
 }
 
 pre_install() {
 	# Check for previous installation
 	if [[ ! -e "$config_file" ]]; then
-		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
+		log $log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		return
 	fi
 
 	if [[ $force == "y" ]]; then
-		$log_info "Previous installation found. Removing..."
+		log $log_info "Previous installation found. Removing..."
 		remove_previous_install
 	elif [[ $force == "n" ]]; then
 		log $log_error "Previous installation found. Exiting..."
@@ -704,7 +704,7 @@ init_config() {
 		return
 	fi
 
-	$log_info "Writing configuration file..."
+	log $log_info "Writing configuration file..."
 	log $log_verbose "Creating configuration directory: $config_path"
 
 	mkdir -p "$config_path"
@@ -732,7 +732,7 @@ post_install() {
 		return
 	fi
 
-	$log_info "Installation complete!"
+	log $log_info "Installation complete!"
 
 	# shellcheck disable=SC2016
 	reject_msg='[INFO] Please make sure to add the installation path to your PATH environment variable.
@@ -764,7 +764,7 @@ post_install() {
 	else
 		if [[ $force == "y" ]]; then
 			echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-			$log_info "Installation path added to PATH environment variable."
+			log $log_info "Installation path added to PATH environment variable."
 		elif [[ $force == "n" ]]; then
 			echo "$reject_msg"
 		else
@@ -773,14 +773,14 @@ post_install() {
 			echo ""
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
 				echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-				$log_info "Installation path added to PATH environment variable."
+				log $log_info "Installation path added to PATH environment variable."
 			else
 				echo "$reject_msg"
 			fi
 		fi
 	fi
 
-	$log_info "Do not forget to source your shell configuration file to apply the changes."
+	log $log_info "Do not forget to source your shell configuration file to apply the changes."
 	echo "    source $shell_config_file"
 }
 

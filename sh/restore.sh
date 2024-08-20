@@ -265,7 +265,7 @@ prepare_target() {
 			read -p "[WARN] Backup directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				$log_info "Exiting..."
+				log $log_info "Exiting..."
 				exit 0
 			else
 				log $log_verbose "Creating backup directory: $target"
@@ -294,22 +294,22 @@ run() {
 		target_file="${BASH_REMATCH[1]}"
 	else
 		log $log_error "Not a valid backup file: $source" >&2
-		$log_info "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
+		log $log_info "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
 		exit 1
 	fi
 
-	$log_info "Restoring backup file: $source"
-	$log_info "To target: $target_path/$target_file"
+	log $log_info "Restoring backup file: $source"
+	log $log_info "To target: $target_path/$target_file"
 
 	# Ask for confirmation if target_file exists
 	if [[ -e "$target_path/$target_file" ]]; then
 		if [[ $dry == "y" ]]; then
 			log $log_dry "Would overwrite existing file: $target_path/$target_file"
 		elif [[ "$force" == "y" ]]; then
-			$log_info "Overwriting existing file: $target_path/$target_file"
+			log $log_info "Overwriting existing file: $target_path/$target_file"
 			rm -rf "${target_path:?}/$target_file"
 		elif [[ "$force" == "n" ]]; then
-			$log_info "File exists, exiting: $target_path/$target_file"
+			log $log_info "File exists, exiting: $target_path/$target_file"
 			exit 0
 		else
 			log $log_warn "File or directory already exists: $target_file"
@@ -328,7 +328,7 @@ run() {
 			exit 1
 		}
 
-		$log_info "Backup restored: $source -> $target_path/$target_file"
+		log $log_info "Backup restored: $source -> $target_path/$target_file"
 	fi
 }
 

@@ -322,7 +322,7 @@ check_target() {
 			read -p "[WARN] Directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				$log_info "Exiting..."
+				log $log_info "Exiting..."
 				exit 0
 			else
 				log $log_verbose "Creating directory: $target"
@@ -370,7 +370,7 @@ extract_archive() {
 		exit 1
 	}
 
-	$log_info "Extracting $source to $target_dir..."
+	log $log_info "Extracting $source to $target_dir..."
 
 	if [[ -z ${target_dir_flag:-} ]]; then
 		if [[ $dependency == "unzip" ]]; then
@@ -420,7 +420,7 @@ extract_archive() {
 	log $log_verbose "Removing temporary directory"
 	rmdir "$temp_dir"
 
-	$log_info "Extraction complete: $target"
+	log $log_info "Extraction complete: $target"
 }
 
 run() {
@@ -442,10 +442,10 @@ run() {
 		fi
 	else
 		if [[ $LIST == "Y" ]]; then
-			$log_info "Listing contents of $source"
+			log $log_info "Listing contents of $source"
 			"$dependency" "$list_flag" "$source"
 		else
-			$log_info "Initiating extraction process."
+			log $log_info "Initiating extraction process."
 			extract_archive "$dependency" "$extract_flag" "$target_dir_flag"
 		fi
 	fi
