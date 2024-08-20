@@ -217,7 +217,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${target:=.}
+	target="${target:-.}"
 
 	# Will only happen when on verbose mode
 	log $log_verbose "Running verbose log level"
@@ -289,17 +289,17 @@ run() {
 	local target_path="$target"
 
 	# Check if the file name matches the backup pattern: file.2019-01-01_00-00-00.bak
-	if [[ "${source##*/}" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.bak$ ]]; then
+	# .backup extension is also supported
+	if [[ "${source##*/}" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.(bak|backup)$ ]]; then
 		# Extract the base filename without the backup extension
 		target_file="${BASH_REMATCH[1]}"
 	else
 		log $log_error "Not a valid backup file: $source" >&2
-		log $log_info "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
+		log $log_error "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
 		exit 1
 	fi
 
-	log $log_info "Restoring backup file: $source"
-	log $log_info "To target: $target_path/$target_file"
+	log $log_info "Restoring: '$source'"
 
 	# Ask for confirmation if target_file exists
 	if [[ -e "$target_path/$target_file" ]]; then
