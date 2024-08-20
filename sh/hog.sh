@@ -108,6 +108,19 @@ parse_args() {
 parse_args "$@"
 
 # Default to current directory if no directory is specified
-${dir:=.}
+dir="${dir:-.}"
 
-du -s --one-file-system "$dir/*" "$dir/.[A-Za-z0-9]*" | sort -rn | head
+# Ensure existence and permissions
+if [[ ! -d "$dir" ]]; then
+	echo "[ERROR] Not a directory: '$dir'" >&2
+	exit 1
+fi
+
+if [[ ! -r "$dir" ]]; then
+	echo "[ERROR] Directory cannot be read: '$dir'" >&2
+	exit 1
+fi
+
+# Calling du directly may fail with "No such file or directory"
+# So instead we call du on every file in $dir
+find "$dir" -maxdepth 1 -mindepth 1 -exec du -sh --one-file-system {} + | sort -rn | head
