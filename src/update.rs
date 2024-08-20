@@ -5,7 +5,7 @@ use version_compare::Version;
 
 impl Runnable for UpdateArgs {
     fn run(&mut self) -> Result<()> {
-        let url = "https://raw.githubusercontent.com/Diomeh/dsu/master/version";
+        let url = "https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION";
 
         let response = get(url)?;
 
