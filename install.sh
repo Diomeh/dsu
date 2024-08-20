@@ -11,6 +11,8 @@
 
 set -uo pipefail
 
+# Logging
+
 # Log levels
 log_silent=0
 log_error=1
@@ -18,8 +20,26 @@ log_warn=2
 log_dry=3
 log_info=4
 log_verbose=5
+
+# Default log level
 log=$log_info
 
+# Log level strings
+declare -A log_levels=(
+	[$log_silent]="SILENT"
+	[$log_error]="ERROR"
+	[$log_warn]="WARN"
+	[$log_dry]="DRY"
+	[$log_info]="INFO"
+	[$log_verbose]="VERBOSE"
+)
+
+# Maximum log level
+# Subtract so as to use the log_levels array as a 0-based index
+max_log_level=${#log_levels[@]}
+max_log_level=$((max_log_level - 1))
+
+# Args and options
 config_path="$HOME/.config/dsu"
 config_file="$config_path/dsu.conf"
 log_file="$config_path/dsu.log"
@@ -98,24 +118,16 @@ EOF
 log() {
 	local level="$1"
 	local message="$2"
-	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
-	local log_level=(
-		"$log_silent"
-		"$log_error"
-		"$log_warn"
-		"$log_dry"
-		"$log_info"
-		"$log_verbose"
-	)
+	local level_str="${log_levels[$level]:-}"
 
-	#	 Assert log level is valid
-	((level >= 0 && level <= 4)) || {
+	# Assert log level is valid
+	[[ -z "$level_str" ]] && {
 		log $log_warn "Invalid log level: $level" >&2
 		return
 	}
 
-	#	Assert message should be printed
-	((log >= log_level[level])) && echo "[${levels[level]}] $message"
+	# Assert message should be printed
+	((log >= level)) && echo "[$level_str] $message"
 }
 
 arg_parse() {
@@ -166,7 +178,7 @@ arg_parse() {
 			-l | --log)
 				log="$2"
 
-				if [[ ! $log =~ ^[0-3]$ ]]; then
+				if [[ ! $log =~ ^[${log_silent}-${max_log_level}]$ ]]; then
 					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
@@ -258,14 +270,14 @@ prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
 		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
+		log $log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -397,7 +409,7 @@ build_rust_cli() {
 		read -p "Rust CLI binary not found. Do you want to build it now? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -420,7 +432,7 @@ install_rust_cli() {
 	config["type"]="rust"
 
 	set_install_path
-	$log_info "Installing Rust CLI binary..."
+	log $log_info "Installing Rust CLI binary..."
 
 	# Do we have the dsu binary?
 	if [[ ! -e "$cli_src" ]]; then
@@ -449,7 +461,7 @@ install_rust_cli() {
 	}
 
 	config_binaries+=("${cli_src##*/}")
-	$log_info "Binary installed successfully to: $install_dir"
+	log $log_info "Binary installed successfully to: $install_dir"
 }
 
 build_bash_scripts() {
@@ -502,7 +514,7 @@ install_bash_scripts() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would install standalone bash scripts"
 	else
-		$log_info "Installing standalone bash scripts..."
+		log $log_info "Installing standalone bash scripts..."
 	fi
 
 	# Do we have the tarball with the scripts?
@@ -549,7 +561,7 @@ install_bash_scripts() {
 	log $log_verbose "Cleaning up temporary directory: $tmp_dir"
 	rm -rf "$tmp_dir"
 
-	$log_info "Bash scripts installed successfully to: $install_dir"
+	log $log_info "Bash scripts installed successfully to: $install_dir"
 }
 
 remove_previous_install() {
@@ -581,7 +593,7 @@ remove_previous_install() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would remove existing $type installation from $path"
 	else
-		$log_info "Removing existing $type installation from $path..."
+		log $log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
@@ -612,19 +624,19 @@ remove_previous_install() {
 		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		$log_info "Uninstallation completed successfully."
+		log $log_info "Uninstallation completed successfully."
 	fi
 }
 
 pre_install() {
 	# Check for previous installation
 	if [[ ! -e "$config_file" ]]; then
-		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
+		log $log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		return
 	fi
 
 	if [[ $force == "y" ]]; then
-		$log_info "Previous installation found. Removing..."
+		log $log_info "Previous installation found. Removing..."
 		remove_previous_install
 	elif [[ $force == "n" ]]; then
 		log $log_error "Previous installation found. Exiting..."
@@ -704,7 +716,7 @@ init_config() {
 		return
 	fi
 
-	$log_info "Writing configuration file..."
+	log $log_info "Writing configuration file..."
 	log $log_verbose "Creating configuration directory: $config_path"
 
 	mkdir -p "$config_path"
@@ -732,7 +744,7 @@ post_install() {
 		return
 	fi
 
-	$log_info "Installation complete!"
+	log $log_info "Installation complete!"
 
 	# shellcheck disable=SC2016
 	reject_msg='[INFO] Please make sure to add the installation path to your PATH environment variable.
@@ -764,7 +776,7 @@ post_install() {
 	else
 		if [[ $force == "y" ]]; then
 			echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-			$log_info "Installation path added to PATH environment variable."
+			log $log_info "Installation path added to PATH environment variable."
 		elif [[ $force == "n" ]]; then
 			echo "$reject_msg"
 		else
@@ -773,14 +785,14 @@ post_install() {
 			echo ""
 			if [[ $REPLY =~ ^[Yy]$ ]]; then
 				echo "export PATH=\"\$PATH:$install_dir\"" >>"$shell_config_file"
-				$log_info "Installation path added to PATH environment variable."
+				log $log_info "Installation path added to PATH environment variable."
 			else
 				echo "$reject_msg"
 			fi
 		fi
 	fi
 
-	$log_info "Do not forget to source your shell configuration file to apply the changes."
+	log $log_info "Do not forget to source your shell configuration file to apply the changes."
 	echo "    source $shell_config_file"
 }
 

@@ -11,6 +11,8 @@
 
 set -uo pipefail
 
+# Logging
+
 # Log levels
 log_silent=0
 log_error=1
@@ -18,8 +20,26 @@ log_warn=2
 log_dry=3
 log_info=4
 log_verbose=5
+
+# Default log level
 log=$log_info
 
+# Log level strings
+declare -A log_levels=(
+	[$log_silent]="SILENT"
+	[$log_error]="ERROR"
+	[$log_warn]="WARN"
+	[$log_dry]="DRY"
+	[$log_info]="INFO"
+	[$log_verbose]="VERBOSE"
+)
+
+# Maximum log level
+# Subtract so as to use the log_levels array as a 0-based index
+max_log_level=${#log_levels[@]}
+max_log_level=$((max_log_level - 1))
+
+# Args and options
 config_path="$HOME/.config/dsu"
 config_file="$config_path/dsu.conf"
 log_file="$config_path/dsu.log"
@@ -58,24 +78,16 @@ EOF
 log() {
 	local level="$1"
 	local message="$2"
-	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
-	local log_level=(
-		"$log_silent"
-		"$log_error"
-		"$log_warn"
-		"$log_dry"
-		"$log_info"
-		"$log_verbose"
-	)
+	local level_str="${log_levels[$level]:-}"
 
-	#	 Assert log level is valid
-	((level >= 0 && level <= 4)) || {
+	# Assert log level is valid
+	[[ -z "$level_str" ]] && {
 		log $log_warn "Invalid log level: $level" >&2
 		return
 	}
 
-	#	Assert message should be printed
-	((log >= log_level[level])) && echo "[${levels[level]}] $message"
+	# Assert message should be printed
+	((log >= level)) && echo "[$level_str] $message"
 }
 
 arg_parse() {
@@ -126,7 +138,7 @@ arg_parse() {
 			-l | --log)
 				log="$2"
 
-				if [[ ! $log =~ ^[0-3]$ ]]; then
+				if [[ ! $log =~ ^[${log_silent}-${max_log_level}]$ ]]; then
 					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
@@ -197,14 +209,14 @@ prompt_for_sudo() {
 	if [[ $force == "y" ]]; then
 		log $log_verbose "Elevating permissions to continue installation."
 	elif [[ $force == "n" ]]; then
-		$log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
+		log $log_info "Elevated (sudo) permissions needed to continue installation. Exiting..."
 		exit 0
 	else
 		# Elevate permissions? Prompt the user
 		read -p "Do you want to elevate permissions to continue installation? [y/N] " -n 1 -r
 		echo ""
 		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-			$log_info "Aborting..."
+			log $log_info "Aborting..."
 			exit 0
 		fi
 	fi
@@ -247,7 +259,7 @@ main() {
 	arg_parse "$@"
 
 	if [[ ! -e "$config_file" ]]; then
-		$log_info "Nothing to uninstall. Configuration file not found: $config_file"
+		log $log_info "Nothing to uninstall. Configuration file not found: $config_file"
 		exit 0
 	fi
 
@@ -275,7 +287,7 @@ main() {
 	if [[ $dry == "y" ]]; then
 		log $log_dry "Would remove existing $type installation from $path"
 	else
-		$log_info "Removing existing $type installation from $path..."
+		log $log_info "Removing existing $type installation from $path..."
 	fi
 
 	set_sudo_command "$path"
@@ -306,7 +318,7 @@ main() {
 		log $log_verbose "Removing configuration directory: $config_path"
 		rmdir "$config_path" 2>/dev/null || true
 
-		$log_info "Uninstallation completed successfully."
+		log $log_info "Uninstallation completed successfully."
 	fi
 }
 

@@ -14,6 +14,8 @@ set -uo pipefail
 version="v2.2.0"
 app=${0##*/}
 
+# Logging
+
 # Log levels
 log_silent=0
 log_error=1
@@ -21,7 +23,24 @@ log_warn=2
 log_dry=3
 log_info=4
 log_verbose=5
+
+# Default log level
 log=$log_info
+
+# Log level strings
+declare -A log_levels=(
+	[$log_silent]="SILENT"
+	[$log_error]="ERROR"
+	[$log_warn]="WARN"
+	[$log_dry]="DRY"
+	[$log_info]="INFO"
+	[$log_verbose]="VERBOSE"
+)
+
+# Maximum log level
+# Subtract so as to use the log_levels array as a 0-based index
+max_log_level=${#log_levels[@]}
+max_log_level=$((max_log_level - 1))
 
 # Args and options
 source=""
@@ -113,24 +132,16 @@ check_version() {
 log() {
 	local level="$1"
 	local message="$2"
-	local levels=("SILENT" "ERROR" "WARN" "DRY" "INFO" "VERBOSE")
-	local log_level=(
-		"$log_silent"
-		"$log_error"
-		"$log_warn"
-		"$log_dry"
-		"$log_info"
-		"$log_verbose"
-	)
+	local level_str="${log_levels[$level]:-}"
 
-	#	 Assert log level is valid
-	((level >= 0 && level <= 4)) || {
+	# Assert log level is valid
+	[[ -z "$level_str" ]] && {
 		log $log_warn "Invalid log level: $level" >&2
 		return
 	}
 
-	#	Assert message should be printed
-	((log >= log_level[level])) && echo "[${levels[level]}] $message"
+	# Assert message should be printed
+	((log >= level)) && echo "[$level_str] $message"
 }
 
 arg_parse() {
@@ -189,7 +200,7 @@ arg_parse() {
 			-l | --log)
 				log="$2"
 
-				if [[ ! $log =~ ^[0-3]$ ]]; then
+				if [[ ! $log =~ ^[${log_silent}-${max_log_level}]$ ]]; then
 					log $log_error "Invalid log level: $log" >&2
 					exit 1
 				fi
@@ -217,7 +228,7 @@ arg_parse() {
 	done
 
 	# Default to current directory if backup directory not provided
-	${target:=.}
+	target="${target:-.}"
 
 	# Will only happen when on verbose mode
 	log $log_verbose "Running verbose log level"
@@ -265,7 +276,7 @@ prepare_target() {
 			read -p "[WARN] Backup directory does not exist. Create? [y/N] " -n 1 -r
 			echo ""
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-				$log_info "Exiting..."
+				log $log_info "Exiting..."
 				exit 0
 			else
 				log $log_verbose "Creating backup directory: $target"
@@ -289,27 +300,27 @@ run() {
 	local target_path="$target"
 
 	# Check if the file name matches the backup pattern: file.2019-01-01_00-00-00.bak
-	if [[ "${source##*/}" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.bak$ ]]; then
+	# .backup extension is also supported
+	if [[ "${source##*/}" =~ ^(.*)\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.(bak|backup)$ ]]; then
 		# Extract the base filename without the backup extension
 		target_file="${BASH_REMATCH[1]}"
 	else
 		log $log_error "Not a valid backup file: $source" >&2
-		$log_info "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
+		log $log_error "Backup file must match the pattern: file.YYYY-MM-DD_hh-mm-ss.bak"
 		exit 1
 	fi
 
-	$log_info "Restoring backup file: $source"
-	$log_info "To target: $target_path/$target_file"
+	log $log_info "Restoring: '$source'"
 
 	# Ask for confirmation if target_file exists
 	if [[ -e "$target_path/$target_file" ]]; then
 		if [[ $dry == "y" ]]; then
 			log $log_dry "Would overwrite existing file: $target_path/$target_file"
 		elif [[ "$force" == "y" ]]; then
-			$log_info "Overwriting existing file: $target_path/$target_file"
+			log $log_info "Overwriting existing file: $target_path/$target_file"
 			rm -rf "${target_path:?}/$target_file"
 		elif [[ "$force" == "n" ]]; then
-			$log_info "File exists, exiting: $target_path/$target_file"
+			log $log_info "File exists, exiting: $target_path/$target_file"
 			exit 0
 		else
 			log $log_warn "File or directory already exists: $target_file"
@@ -328,7 +339,7 @@ run() {
 			exit 1
 		}
 
-		$log_info "Backup restored: $source -> $target_path/$target_file"
+		log $log_info "Backup restored: $source -> $target_path/$target_file"
 	fi
 }
 
