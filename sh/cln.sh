@@ -99,7 +99,7 @@ Examples
 		$app -r ~/Documents
 
 Special Character Replacement
-	A regex pattern of the form "[^[:alnum:]_.-]" is used to match special characters.
+	A regex pattern of the form "[^A-Za-z0-9_.-]" is used to match special characters.
 
 Note
 	- Ensure you have the necessary permissions to read/write files in the specified directories.
@@ -256,7 +256,7 @@ replace_special_chars() {
 	filename=${filepath##*/}
 
 	# Replace spaces with underscore
-	new_name=${new_name// /_}
+	new_name=${filename// /_}
 
 	# Replace multiple underscores with a single underscore
 	new_name=${new_name//__/_}
@@ -266,7 +266,7 @@ replace_special_chars() {
 	new_name=${new_name%_}
 
 	# Remove special characters
-	new_name=${new_name//[^[:alnum:]_.-]/}
+	new_name=${new_name//[^A-Za-z0-9_.-]/}
 
 	# If new_name is empty, skip
 	if [[ -z "$new_name" ]]; then
@@ -289,7 +289,7 @@ replace_special_chars() {
 		fi
 		return 0
 	else
-		$log_info "Renaming: $filename -> $new_name"
+		log $log_info "Renaming: $filename -> $new_name"
 	fi
 
 	# Check if target file doesn't exists
