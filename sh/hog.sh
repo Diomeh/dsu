@@ -5,7 +5,7 @@
 # Author: David Urbina (davidurbina.dev@gmail.com)
 # Date: 2022-02
 # License: MIT
-# Updated: 2024-07
+# Updated: 2024-08
 #
 # -*- mode: shell-script -*-
 
@@ -13,6 +13,45 @@ set -uo pipefail
 
 version="v2.2.9"
 app=${0##*/}
+
+# Logging
+
+# Log levels
+log_silent=0
+log_error=1
+log_warn=2
+log_dry=3
+log_info=4
+log_verbose=5
+
+# ANSI color codes
+red="\033[0;31m"
+green="\033[0;32m"
+yellow="\033[1;33m"
+blue="\033[0;34m"
+no_color="\033[0m"
+
+# Enable / disable colored output
+use_color="y"
+
+# Default log level
+log=$log_info
+
+# Log level strings
+# Each level is associated with a color
+declare -A log_levels=(
+	[$log_silent]="SILENT $no_color"
+	[$log_error]="ERROR $red"
+	[$log_warn]="WARN $yellow"
+	[$log_dry]="DRY $green"
+	[$log_info]="INFO $blue"
+	[$log_verbose]="VERBOSE $blue"
+)
+
+# Maximum log level
+# Subtract so as to use the log_levels array as a 0-based index
+max_log_level=${#log_levels[@]}
+max_log_level=$((max_log_level - 1))
 
 dir=""
 
@@ -25,14 +64,27 @@ sorted by size in descending order. If no directory is specified, the current
 directory is used by default.
 
 Options
--h, --help
-	Show this help message and exit.
+	-h, --help
+		Show this help message and exit.
 
--v, --version
-	Show the version of this script and exit.
+	-v, --version
+		Show the version of this script and exit.
 
--c, --check-version
-	Checks the version of this script against the remote repo version and prints a message on how to update.
+	-c, --check-version
+		Checks the version of this script against the remote repo version and prints a message on how to update.
+
+	-l, --log <level>
+		Log level. One of (4 by default):
+			- 0: Silent mode. No output
+			- 1: Error mode. Only errors
+			- 2: Warn mode. Errors and warnings
+			- 3: Dry mode. Errors, warnings, and dry run information
+			- 4: Info mode. Errors, warnings, and informational messages (default)
+			- 5: Verbose mode. Detailed information about the operations being performed
+
+	--no-color
+		Disable ANSI colored output.
+		Alternatively, you can set the NO_COLOR or NOCOLOR environment variables to disable colored output.
 
 Arguments
 	directory
@@ -58,22 +110,63 @@ version() {
 }
 
 check_version() {
-	echo "[INFO] Current version: $version"
-	echo "[INFO] Checking for updates..."
+	log $log_info "Checking for updates..."
+	log $log_info "Current version: $version"
 
-	local remote_version
+	local local_version remote_version
+	local_version="$version"
 	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
 
-	# Check if the remote version is different from the local version
-	if [[ "$remote_version" != "$version" ]]; then
-		echo "[INFO] A new version of $app ($remote_version) is available!"
-		echo "[INFO] Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
+	# strip leading v
+	local_version="${local_version#v}"
+	remote_version="${remote_version#v}"
+
+	# split into version components
+	IFS='.' read -r r_major r_minor r_patch <<<"$remote_version"
+	IFS='.' read -r l_major l_minor l_patch <<<"$local_version"
+
+	# Check if the remote version is greater than local version
+	if ((r_major > l_major || r_minor > l_minor || r_patch > l_patch)); then
+		log $log_info "A new version of $app ($remote_version) is available!"
+		log $log_info "Refer to the repo README on how to update: https://github.com/Diomeh/dsu/blob/master/README.md"
 	else
-		echo "[INFO] You are running the latest version of $app."
+		log $log_info "You are running the latest version of $app."
 	fi
+}
+
+log() {
+	local level="$1"
+	local message="$2"
+
+	local level_str level_color
+	read -r level_str level_color <<<"${log_levels[$level]:-}"
+
+	# Assert log level is valid
+	[[ -z "$level_str" ]] && {
+		log $log_warn "Invalid log level: $level" >&2
+		return
+	}
+
+	[[ $use_color == "n" ]] && {
+		level_color=""
+		no_color=""
+	}
+
+	# Assert message should be printed
+	((log >= level)) && printf "%b[%s]%b %s\n" "$level_color" "$level_str" "$no_color" "$message"
+}
+
+disable_color() {
+	# Disable color output if needed
+
+	# Flag set to disable color, no need to check further
+	[[ $use_color == "n" ]] && return
+
+	# Check if env var NO_COLOR and NOCOLOR set
+	[[ -z "$NO_COLOR" || -z "$NOCOLOR" ]] && use_color="n"
 }
 
 parse_args() {
@@ -91,11 +184,25 @@ parse_args() {
 				check_version
 				exit 0
 				;;
+			-l | --log)
+				log="$2"
+
+				if [[ ! $log =~ ^[${log_silent}-${max_log_level}]$ ]]; then
+					log $log_error "Invalid log level: $log" >&2
+					exit 1
+				fi
+
+				shift 2
+				;;
+			--no-color)
+				use_color="n"
+				shift
+				;;
 			*)
 				if [[ -z "$dir" ]] && [[ -d "$1" ]]; then
 					dir="$1"
 				else
-					echo "[ERROR] Unknown option: $1" >&2
+					log $log_error "Unknown option: $1" >&2
 					usage
 					exit 1
 				fi
@@ -103,24 +210,30 @@ parse_args() {
 				;;
 		esac
 	done
+
 }
 
-parse_args "$@"
+prepare_dir() {
+	# Default to current directory if no directory is specified
+	dir="${dir:-.}"
 
-# Default to current directory if no directory is specified
-dir="${dir:-.}"
+	[[ ! -r "$dir" ]] && {
+		log $log_error "Permission denied: '$dir'" >&2
+		exit 1
+	}
 
-# Ensure existence and permissions
-if [[ ! -d "$dir" ]]; then
-	echo "[ERROR] Not a directory: '$dir'" >&2
-	exit 1
-fi
+	[[ ! -d "$dir" ]] && {
+		log $log_error "Not a directory: '$dir'" >&2
+		exit 1
+	}
+}
 
-if [[ ! -r "$dir" ]]; then
-	echo "[ERROR] Directory cannot be read: '$dir'" >&2
-	exit 1
-fi
+main() {
+	parse_args "$@"
+	disable_color
+	prepare_dir
 
-# Calling du directly may fail with "No such file or directory"
-# So instead we call du on every file in $dir
-find "$dir" -maxdepth 1 -mindepth 1 -exec du -sh --one-file-system {} + | sort -rn | head
+	# Calling du directly may fail with "No such file or directory"
+	# So instead we call du on every file in $dir
+	find "$dir" -maxdepth 1 -mindepth 1 -exec du -sh --one-file-system {} + | sort -rn | head
+}
