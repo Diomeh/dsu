@@ -1,5 +1,5 @@
-{ pkgs ? import <nixpkgs> {} }:
-  pkgs.mkShellNoCC {
+{ pkgs ? import <nixpkgs> { } }:
+pkgs.mkShellNoCC {
   packages = with pkgs; [
     bacon # Background rust code checker
     shellcheck # Shell script linter

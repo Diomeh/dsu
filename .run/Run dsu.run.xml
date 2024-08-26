@@ -6,7 +6,7 @@
       <env name="PKG_CONFIG_PATH" value="/nix/store/8pvlw63anasimxk2q17c85aabvv5kl8l-openssl-3.0.14-dev/lib/pkgconfig" />
     </envs>
     <option name="emulateTerminal" value="true" />
-    <option name="channel" value="STABLE" />
+    <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
     <option name="allFeatures" value="false" />
     <option name="withSudo" value="false" />
