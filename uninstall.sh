@@ -5,7 +5,7 @@
 # Author: David Urbina (davidurbina.dev@gmail.com)
 # Date: 2022-02
 # License: MIT
-# Updated: 2024-07
+# Updated: 2024-08
 #
 # -*- mode: shell-script -*-
 
@@ -21,17 +21,28 @@ log_dry=3
 log_info=4
 log_verbose=5
 
+# ANSI color codes
+red="\033[0;31m"
+green="\033[0;32m"
+yellow="\033[1;33m"
+blue="\033[0;34m"
+no_color="\033[0m"
+
+# Enable / disable colored output
+use_color="y"
+
 # Default log level
 log=$log_info
 
 # Log level strings
+# Each level is associated with a color
 declare -A log_levels=(
-	[$log_silent]="SILENT"
-	[$log_error]="ERROR"
-	[$log_warn]="WARN"
-	[$log_dry]="DRY"
-	[$log_info]="INFO"
-	[$log_verbose]="VERBOSE"
+	[$log_silent]="SILENT $no_color"
+	[$log_error]="ERROR $red"
+	[$log_warn]="WARN $yellow"
+	[$log_dry]="DRY $green"
+	[$log_info]="INFO $blue"
+	[$log_verbose]="VERBOSE $blue"
 )
 
 # Maximum log level
@@ -57,12 +68,15 @@ Usage: $name [OPTIONS]
 Removes the installed binaries and configuration files of the Diomeh's Script Utilities.
 
 Options:
-  -h, --help              Display this help message and exit
-  -d, --dry               Dry run. Print the operations that would be performed without actually executing them.
-  -f, --force <y/n/ask>   Force mode. One of (ask by default):
-                            - y: Assume "yes" as the answer to all prompts and run non-interactively.
-                            - n: Assume "no" as the answer to all prompts and run non-interactively.
-                            - ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
+	-h, --help
+		Display this help message and exit
+	-d, --dry
+		Dry run. Print the operations that would be performed without actually executing them.
+	-f, --force <y/n/ask>
+		Force mode. One of (ask by default):
+			- y: Assume "yes" as the answer to all prompts and run non-interactively.
+			- n: Assume "no" as the answer to all prompts and run non-interactively.
+			- ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
 
 	-l, --log <level>
 		Log level. One of (4 by default):
@@ -72,13 +86,19 @@ Options:
 			- 3: Dry mode. Errors, warnings, and dry run information
 			- 4: Info mode. Errors, warnings, and informational messages (default)
 			- 5: Verbose mode. Detailed information about the operations being performed
+
+	--no-color
+		Disable ANSI colored output.
+		Alternatively, you can set the NO_COLOR or NOCOLOR environment variables to disable colored output.
 EOF
 }
 
 log() {
 	local level="$1"
 	local message="$2"
-	local level_str="${log_levels[$level]:-}"
+
+	local level_str level_color
+	read -r level_str level_color <<<"${log_levels[$level]:-}"
 
 	# Assert log level is valid
 	[[ -z "$level_str" ]] && {
@@ -86,8 +106,23 @@ log() {
 		return
 	}
 
+	[[ $use_color == "n" ]] && {
+		level_color=""
+		no_color=""
+	}
+
 	# Assert message should be printed
-	((log >= level)) && echo "[$level_str] $message"
+	((log >= level)) && printf "%b[%s]%b %s\n" "$level_color" "$level_str" "$no_color" "$message"
+}
+
+disable_color() {
+	# Disable color output if needed
+
+	# Flag set to disable color, no need to check further
+	[[ $use_color == "n" ]] && return
+
+	# Check if env var NO_COLOR and NOCOLOR set
+	[[ -z "$NO_COLOR" || -z "$NOCOLOR" ]] && use_color="n"
 }
 
 arg_parse() {
@@ -144,6 +179,10 @@ arg_parse() {
 				fi
 
 				shift 2
+				;;
+			--no-color)
+				use_color="n"
+				shift
 				;;
 			-*)
 				log $log_error "Unknown option: $1" >&2
@@ -257,6 +296,7 @@ main() {
 	local path=""
 
 	arg_parse "$@"
+	disable_color
 
 	if [[ ! -e "$config_file" ]]; then
 		log $log_info "Nothing to uninstall. Configuration file not found: $config_file"

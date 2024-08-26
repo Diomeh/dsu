@@ -5,7 +5,7 @@
 # Author: David Urbina (davidurbina.dev@gmail.com)
 # Date: 2022-02
 # License: MIT
-# Updated: 2024-07
+# Updated: 2024-08
 #
 # -*- mode: shell-script -*-
 
@@ -21,17 +21,28 @@ log_dry=3
 log_info=4
 log_verbose=5
 
+# ANSI color codes
+red="\033[0;31m"
+green="\033[0;32m"
+yellow="\033[1;33m"
+blue="\033[0;34m"
+no_color="\033[0m"
+
+# Enable / disable colored output
+use_color="y"
+
 # Default log level
 log=$log_info
 
 # Log level strings
+# Each level is associated with a color
 declare -A log_levels=(
-	[$log_silent]="SILENT"
-	[$log_error]="ERROR"
-	[$log_warn]="WARN"
-	[$log_dry]="DRY"
-	[$log_info]="INFO"
-	[$log_verbose]="VERBOSE"
+	[$log_silent]="SILENT $no_color"
+	[$log_error]="ERROR $red"
+	[$log_warn]="WARN $yellow"
+	[$log_dry]="DRY $green"
+	[$log_info]="INFO $blue"
+	[$log_verbose]="VERBOSE $blue"
 )
 
 # Maximum log level
@@ -69,41 +80,45 @@ Usage: $name [OPTIONS]
 Installs Diomeh's Script Utilities (dsu) on your system.
 
 Options
--h, --help
-	Display this help message and exit
+	-h, --help
+		Display this help message and exit
 
--d, --dry
-	Dry run. Print the operations that would be performed without actually executing them.
+	-d, --dry
+		Dry run. Print the operations that would be performed without actually executing them.
 
--f, --force <y/n/ask>
-	Interactive mode. If set to other than 'ask' -t is required. One of (ask by default):
-		- y: Assume "yes" as the answer to all prompts and run non-interactively.
-		- n: Assume "no" as the answer to all prompts and run non-interactively.
-		- ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
+	-f, --force <y/n/ask>
+		Interactive mode. If set to other than 'ask' -t is required. One of (ask by default):
+			- y: Assume "yes" as the answer to all prompts and run non-interactively.
+			- n: Assume "no" as the answer to all prompts and run non-interactively.
+			- ask: Prompt for confirmation before removing binaries and configuration files. This is the default behavior.
 
--t, --type <type>
-	Installation type. If -f is set, this option is required. One of:
-		- rust: Install the Rust CLI binary
-		- bash: Install the standalone bash scripts
+	-t, --type <type>
+		Installation type. If -f is set, this option is required. One of:
+			- rust: Install the Rust CLI binary
+			- bash: Install the standalone bash scripts
 
--p, --path <path>
-	The path where the utilities will be installed. If -f is set, this option is required.
+	-p, --path <path>
+		The path where the utilities will be installed. If -f is set, this option is required.
 
--l, --log <level>
-	Log level. One of (4 by default):
-		- 0: Silent mode. No output
-		- 1: Error mode. Only errors
-		- 2: Warn mode. Errors and warnings
-		- 3: Dry mode. Errors, warnings, and dry run information
-		- 4: Info mode. Errors, warnings, and informational messages (default)
-		- 5: Verbose mode. Detailed information about the operations being performed
+	-l, --log <level>
+		Log level. One of (4 by default):
+			- 0: Silent mode. No output
+			- 1: Error mode. Only errors
+			- 2: Warn mode. Errors and warnings
+			- 3: Dry mode. Errors, warnings, and dry run information
+			- 4: Info mode. Errors, warnings, and informational messages (default)
+			- 5: Verbose mode. Detailed information about the operations being performed
+
+	--no-color
+		Disable ANSI colored output.
+		Alternatively, you can set the NO_COLOR or NOCOLOR environment variables to disable colored output.
 
 Examples
 	Install the Rust CLI binary to the default path (/usr/local/bin)
-		$name -f y -t rust
+		$name --force y --type rust
 
 	Install the standalone bash scripts to a custom path silently
-		$name -l 0 -f y -t bash -p /opt/dsu
+		$name --log 0 --force y --type bash --path /opt/dsu
 
 Configuration
 	This script will write a configuration file to $config_file and install the utilities to the specified path.
@@ -115,10 +130,14 @@ Logs
 EOF
 }
 
+
+
 log() {
 	local level="$1"
 	local message="$2"
-	local level_str="${log_levels[$level]:-}"
+
+	local level_str level_color
+	read -r level_str level_color <<<"${log_levels[$level]:-}"
 
 	# Assert log level is valid
 	[[ -z "$level_str" ]] && {
@@ -126,8 +145,23 @@ log() {
 		return
 	}
 
+	[[ $use_color == "n" ]] && {
+		level_color=""
+		no_color=""
+	}
+
 	# Assert message should be printed
-	((log >= level)) && echo "[$level_str] $message"
+	((log >= level)) && printf "%b[%s]%b %s\n" "$level_color" "$level_str" "$no_color" "$message"
+}
+
+disable_color() {
+	# Disable color output if needed
+
+	# Flag set to disable color, no need to check further
+	[[ $use_color == "n" ]] && return
+
+	# Check if env var NO_COLOR and NOCOLOR set
+	[[ -z "$NO_COLOR" || -z "$NOCOLOR" ]] && use_color="n"
 }
 
 arg_parse() {
@@ -205,6 +239,10 @@ arg_parse() {
 			-p | --path)
 				user_path="$2"
 				shift 2
+				;;
+			--no-color)
+				use_color="n"
+				shift
 				;;
 			-*)
 				log $log_error "Unknown option: $1" >&2
@@ -798,6 +836,7 @@ post_install() {
 
 main() {
 	arg_parse "$@"
+	disable_color
 
 	pre_install
 
