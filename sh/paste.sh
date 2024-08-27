@@ -110,7 +110,7 @@ check_version() {
 
 	local local_version remote_version
 	local_version="$version"
-	remote_version="$(curl -s https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
+	remote_version="$(curl -sS https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION)"
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
