@@ -11,7 +11,7 @@
 
 set -uo pipefail
 
-version="v2.2.9"
+version="2.2.9"
 app=${0##*/}
 
 # Logging
@@ -148,10 +148,6 @@ check_version() {
 
 	# strip leading and trailing whitespace
 	remote_version="${remote_version//[[:space:]]/}"
-
-	# strip leading v
-	local_version="${local_version#v}"
-	remote_version="${remote_version#v}"
 
 	# split into version components
 	IFS='.' read -r r_major r_minor r_patch <<<"$remote_version"
