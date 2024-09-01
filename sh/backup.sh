@@ -13,7 +13,7 @@ set -uo pipefail
 
 # App data
 app=${0##*/}
-version="2.2.10"
+version="2.2.12"
 
 # Logging
 
