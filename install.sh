@@ -156,12 +156,15 @@ log() {
 
 disable_color() {
 	# Disable color output if needed
+	# Avoid unbound variable error
+	local no_color_env=${NO_COLOR:-}
+	local nocolor_env=${NOCOLOR:-}
 
 	# Flag set to disable color, no need to check further
 	[[ $use_color == "n" ]] && return
 
 	# Check if env var NO_COLOR and NOCOLOR set
-	[[ -z "$NO_COLOR" || -z "$NOCOLOR" ]] && use_color="n"
+	[[ -z "$no_color_env" || -z "$nocolor_env" ]] && use_color="n"
 }
 
 arg_parse() {
