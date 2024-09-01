@@ -236,3 +236,5 @@ main() {
 	# So instead we call du on every file in $dir
 	find "$dir" -maxdepth 1 -mindepth 1 -exec du -sh --one-file-system {} + | sort -rn | head
 }
+
+main "$@"
