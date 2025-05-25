@@ -224,7 +224,7 @@ impl XtractArgs {
         let mut archive = tar::Archive::new(tar);
 
         // Extract the archive to the current directory
-        archive.unpack(".")?;
+        archive.unpack("../..")?;
 
         Ok(())
     }

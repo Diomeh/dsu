@@ -9,23 +9,31 @@ A set of utilities to handle various file operations like
 - file cleaning
 - copying and pasting from and to the shell
 
+> [!NOTE]  
+> This project is a **monorepo** containing two main codebases:
+> - `./bash`: standalone Bash scripts
+> - `./rust`: a Rust-based CLI tool
+
+Each version of the utilities shares similar functionality but is built for different environments and usage preferences.
+
 ## Getting started
 
-Two distribution method are available, either:
+Two distribution methods are available:
 
-- standalone bash scripts
-- rust CLI tool
+- standalone Bash scripts
+- Rust CLI tool
 
 ### Standalone bash scripts
 
 Please refer to the [wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts)
-for information on building and running the standalone bash scripts;
-Alternatively you can find a pre-built tarball in the [releases page](https://github.com/Diomeh/dsu/releases/latest).
+for information on building and running the standalone Bash scripts.
+
+Alternatively, you can find a pre-built tarball in the [releases page](https://github.com/Diomeh/dsu/releases/latest).
 
 ### Rust CLI tool
 
-A unix binary named as `dsu-X-Y-Z` can be found in the [releases page](https://github.com/Diomeh/dsu/releases/latest)
-where `X-Y-Z` is the version number. Alternatively you can build it on your own.
+A Unix binary named as `dsu-X-Y-Z` can be found in the [releases page](https://github.com/Diomeh/dsu/releases/latest)
+where `X-Y-Z` is the version number. Alternatively, you can build it on your own.
 
 ## Usage
 
@@ -41,33 +49,33 @@ Run the utility with the `--help` flag to see the available options and how to u
 ./dsu-X-Y-Z --help
 ```  
 
-Each utility has its own set of options and arguments that you can see running the `--help` flag with the utility name:
+Each utility has its own set of options and arguments that you can see by running the `--help` flag with the utility name:
 
 ```bash
 ./dsu-X-Y-Z <utility> --help
 ```
 
-For a breakdown of all the utilities, their options and what do they do please refer to the [wiki](https://github.com/Diomeh/dsu/wiki)
+For a breakdown of all the utilities, their options, and what they do, please refer to the [wiki](https://github.com/Diomeh/dsu/wiki)
 
-### Installation
+## Installation
 
 There are several different ways to install the utility on your system:
 
-- copy|install the binary to a directory in your PATH
+- copy/install the binary to a directory in your PATH
 - create a symbolic link to the binary in a directory in your PATH
 - install it globally to `/opt/dsu` and make that directory part of your PATH
 
-#### Installing to a directory in your PATH
+### Installing to a directory in your PATH
 
-To install the utility you can copy the binary to a directory in your PATH. Common directories are:
+To install the utility, you can copy the binary to a directory in your PATH. Common directories include:
 
 - Single user:
-    - `~/.local/bin`
-    - `~/bin`
+  - `~/.local/bin`
+  - `~/bin`
 - System-wide:
-    - `/usr/local/bin`
-    - `/usr/bin`
-    - `/opt`
+  - `/usr/local/bin`
+  - `/usr/bin`
+  - `/opt`
 
 For single user:
 
@@ -99,10 +107,9 @@ cp dsu-X-Y-Z /usr/local/bin/dsu
 chmod +x /usr/local/bin/dsu
 ```
 
-#### Creating a symbolic link
+### Creating a symbolic link
 
 You can also create a symbolic link to the binary in a directory in your PATH.
-This is useful if you want to keep the binary in a different directory than the one in your PATH.
 
 For single user:
 
@@ -118,26 +125,26 @@ For system-wide:
 ln -s /path/to/dsu-X-Y-Z /usr/local/bin/dsu
 ```
 
-#### Installing to `/opt`
+### Installing to `/opt`
 
 As a third option, you can install the utility globally to `/opt/dsu` and make that directory part of your PATH.
 
 **Note that you'll need `sudo` or root permissions to do this.**
 
-First, create the directory:
+Create the directory:
 
 ```bash
 mkdir -p /opt/dsu
 ```
 
-Then copy the binary to the directory:
+Then copy the binary:
 
 ```bash
 cp dsu-X-Y-Z /opt/dsu/dsu
 chmod +x /opt/dsu/dsu
 ```
 
-Add the directory to your PATH by adding the following line to your shell configuration file (e.g. `~/.bashrc`, `~/.zshrc`, etc.):
+Update your PATH in your shell config (e.g. `~/.bashrc`, `~/.zshrc`):
 
 ```bash
 # Add diomeh's script utilities to PATH
@@ -155,57 +162,76 @@ If you want to update the binary, simply replace the symbolic link with a new on
 
 ### Uninstallation
 
-To uninstall the utility, simply remove the binary from the directory where you installed it.
+To uninstall the utility:
 
-- If you installed it to a directory in your PATH, remove the binary from that directory.
-- If you created a symbolic link, remove the symbolic link.
-- If you installed it to `/opt`, remove the binary from `/opt/dsu`.
-    - Also remove the directory from your PATH in your shell configuration file.
+- Remove the binary from your PATH if copied.
+- Remove the symbolic link if one was created.
+- Remove the binary from `/opt/dsu` and update your PATH if installed there.
 
 ## Local development
 
-To build the rust CLI tool, you will need to have the rust toolchain installed on your system.
-Please refer to the [rust website](https://www.rust-lang.org/tools/install) for instructions on how to install the rust toolchain.
+### Monorepo Structure
 
-`bacon` is used as the build tool for this project. To install `bacon`, run the following command:
+This project is structured as a monorepo:
+
+```
+.
+├── bash/       # Standalone Bash scripts
+└── rust/       # Rust-based CLI tool
+```
+
+### Rust CLI Tool
+
+To build the Rust CLI tool, you need to have the Rust toolchain installed.  
+Install it from the [Rust website](https://www.rust-lang.org/tools/install).
+
+This repo uses [`bacon`](https://dystroy.org/bacon/) as the build tool:
 
 ```bash
 cargo install bacon
 ```
 
-Afterwards you can build the project by running the following command:
+Build and watch for changes:
 
 ```bash
 bacon
 ```
 
-This will build and watch for any changes in the source code and rebuild the project automatically.
-For more information on how to use `bacon`, please refer to the [bacon documentation](https://dystroy.org/bacon/)
-and the [bacon config file](./bacon.toml).
+Refer to [`rust/bacon.toml`](./rust/bacon.toml) for configuration.
 
 ### Project structure
 
-Each utility is defined as a module in the `src` directory.
-The main entry point for the CLI tool is in the `src/main.rs` file.
+Rust modules are in `rust/src/`.
 
-The module `src/cli.rs` contains the command line interface for `dsu` and defines
-all options and arguments for both the tool itself and all the utilities.
+- `main.rs`: entry point
+- `cli.rs`: CLI definitions
+
+This will build and watch for any changes in the source code and rebuild the project automatically.
+For more information on how to use `bacon`, please refer to the [bacon documentation](https://dystroy.org/bacon/)
+and the [bacon config file](rust/bacon.toml).
+
+### Project structure
+
+Rust modules are in `rust/src/`.
+
+- `main.rs`: entry point
+- `cli.rs`: CLI definitions
+
 
 ### Testing
 
-As of now, testing has only been implemented for standalone bash scripts.
-Refer to the [bash scripts wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts)
-for more information on how to run the tests.
+Currently, only Bash scripts have dedicated tests.  
+Refer to the [wiki](https://github.com/Diomeh/dsu/wiki/Standalone-bash-scripts) for details.
 
 ### Deployment
 
-To deploy the rust CLI tool, you can run the following command:
+To build the release version of the Rust CLI:
 
 ```bash
 cargo build --release
 ```
 
-This will build the project in release mode and create a binary optimized for release in the `target/release` directory.
+Binary will be in `target/release/`.
 
 ## License
 
