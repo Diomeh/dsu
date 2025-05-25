@@ -30,7 +30,7 @@ pub fn validate_paths(source: &PathBuf, target: &mut Option<PathBuf>, dry: bool)
     }
 
     let real_target = match target {
-        None => PathBuf::from(".."),
+        None => PathBuf::from("../../.."),
         Some(path) => {
             if !path.exists() {
                 // Check if the target path is a directory (i.e. doesn't have a file extension)

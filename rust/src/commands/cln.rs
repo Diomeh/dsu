@@ -9,7 +9,7 @@ impl Runnable for ClnArgs {
     fn run(&mut self) -> Result<()> {
         // use the current directory if no paths are provided
         if self.paths.is_empty() {
-            self.paths.push(PathBuf::from("."));
+            self.paths.push(PathBuf::from("../.."));
 
             // set recurse to true
             // set depth to 1 if not set
