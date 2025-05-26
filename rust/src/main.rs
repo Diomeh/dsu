@@ -1,13 +1,6 @@
-mod backup;
 mod cli;
-mod cln;
-mod copy;
-mod file_keeper;
-mod hog;
-mod paste;
-mod restore;
-mod xtract;
-mod update;
+mod commands;
+mod utils;
 
 use clap::Parser;
 use color_eyre::Result;

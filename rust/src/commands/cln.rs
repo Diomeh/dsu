@@ -68,10 +68,16 @@ impl ClnArgs {
         }
 
         // clean the filename by removing invalid characters
-        let clean_filename: String = filename.chars()
+        let clean_filename: String = filename
+            .chars()
             .map(|c| {
-                if c.is_ascii_alphanumeric() || ['_', '-', '.'].contains(&c) { c } else { '_' }
-            }).collect();
+                if c.is_ascii_alphanumeric() || ['_', '-', '.'].contains(&c) {
+                    c
+                } else {
+                    '_'
+                }
+            })
+            .collect();
 
         // replace consecutive underscores with a single underscore
         let clean_filename = Regex::new(r"__+")
@@ -126,7 +132,10 @@ impl ClnArgs {
                 println!("{:?} -> {:?}", path, clean_path);
             }
             Err(err) => {
-                eprintln!("ERROR: Failed to rename {:?} to {:?}: {}", path, clean_path, err);
+                eprintln!(
+                    "ERROR: Failed to rename {:?} to {:?}: {}",
+                    path, clean_path, err
+                );
             }
         }
     }

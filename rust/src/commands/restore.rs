@@ -5,7 +5,7 @@ use std::fs::copy;
 
 use crate::{
     cli::{RestoreArgs, Runnable},
-    file_keeper::validate_paths,
+    utils::file_keeper::validate_paths,
 };
 
 impl Runnable for RestoreArgs {
@@ -32,7 +32,7 @@ impl RestoreArgs {
         }
 
         // Check if source matches backup pattern
-        let pattern = Regex::new(r"^(.*)\.(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.bak$").unwrap();
+        let pattern = Regex::new(r"^(.*)\.(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.bak$")?;
         let target_filename = match pattern.captures(&filename) {
             None => &filename[..filename.len() - 4], // filename.ext.bak
             Some(captures) => captures.get(1).unwrap().as_str(), // filename.ext.timestamp.bak

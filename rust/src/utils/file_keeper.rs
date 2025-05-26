@@ -1,10 +1,10 @@
+use color_eyre::eyre::bail;
 use color_eyre::Result;
 use std::{
     fs::{create_dir_all, metadata},
     os::unix::fs::PermissionsExt,
     path::PathBuf,
 };
-use color_eyre::eyre::bail;
 
 pub fn is_readable(path: &PathBuf) -> bool {
     match metadata(path) {
@@ -45,11 +45,7 @@ pub fn validate_paths(source: &PathBuf, target: &mut Option<PathBuf>, dry: bool)
                                 println!("Created directory: {:?}", path);
                             }
                             Err(err) => {
-                                bail!(
-                                    "Failed to create directory {:?}: {}",
-                                    path,
-                                    err
-                                );
+                                bail!("Failed to create directory {:?}: {}", path, err);
                             }
                         }
                     }

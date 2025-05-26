@@ -1,10 +1,10 @@
-use std::{fs, path::PathBuf};
 use color_eyre::{eyre::bail, eyre::Result};
 use dialoguer::Confirm;
+use std::{fs, path::PathBuf};
 
 use crate::{
     cli::{BackupArgs, Runnable},
-    file_keeper::validate_paths,
+    utils::file_keeper::validate_paths,
 };
 
 impl Runnable for BackupArgs {
