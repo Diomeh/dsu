@@ -28,13 +28,8 @@ src/
 │   └── error.rs        # Error types and handling
 └── commands/
     ├── mod.rs          # Command module exports
-    ├── backup.rs       # Backup command implementation
-    ├── restore.rs      # Restore command implementation
-    ├── cln.rs          # Clean command implementation
-    ├── copy.rs         # Copy command implementation
-    ├── hog.rs          # Disk usage command implementation
-    ├── paste.rs        # Paste command implementation
-    └── xtract.rs       # Extract command implementation
+    ├── ...        
+    └── <command>.rs    # Command implementation
 ```
 
 ## Architecture Patterns
