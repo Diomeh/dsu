@@ -1,8 +1,25 @@
+use clap::Args;
 use color_eyre::eyre::{bail, Result};
+use std::path::PathBuf;
 
-use crate::cli::{HogArgs, Runnable};
+use crate::cli::Runnable;
 
-impl Runnable for HogArgs {
+#[derive(Args, Debug)]
+pub struct Hog {
+    /// Directory to analyze
+    #[arg(default_value = ".")]
+    pub dir: PathBuf,
+
+    /// Human readable sizes
+    #[arg(long, short = 'H', default_value = "false")]
+    pub human_readable: bool,
+
+    /// Number of items to show
+    #[arg(long, short = 'n', default_value = "10")]
+    pub limit: usize,
+}
+
+impl Runnable for Hog {
     fn run(&mut self) -> Result<()> {
         if !self.dir.is_dir() {
             bail!("Not a directory: {:?}", self.dir);
@@ -60,7 +77,7 @@ impl Runnable for HogArgs {
     }
 }
 
-impl HogArgs {
+impl Hog {
     fn human_size(&self, size: usize) -> String {
         match size {
             s if s < 1024 => format!("{} B", s),

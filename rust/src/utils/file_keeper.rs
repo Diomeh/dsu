@@ -1,9 +1,9 @@
 use color_eyre::eyre::bail;
 use color_eyre::Result;
 use std::{
-    fs::{create_dir_all, metadata},
-    os::unix::fs::PermissionsExt,
-    path::PathBuf,
+  fs::{create_dir_all, metadata},
+  os::unix::fs::PermissionsExt,
+  path::PathBuf,
 };
 
 pub fn is_readable(path: &PathBuf) -> bool {

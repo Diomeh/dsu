@@ -1,13 +1,23 @@
+use crate::{cli::Runnable, utils::file_keeper::validate_paths};
+use clap::Args;
 use color_eyre::{eyre::bail, eyre::Result};
 use dialoguer::Confirm;
 use std::{fs, path::PathBuf};
 
-use crate::{
-    cli::{BackupArgs, Runnable},
-    utils::file_keeper::validate_paths,
-};
+#[derive(Args, Debug)]
+pub struct Backup {
+    /// Source element to be backed up
+    pub source: PathBuf,
 
-impl Runnable for BackupArgs {
+    /// Destination to which the source element will be backed up (current dir by default)
+    pub target: Option<PathBuf>,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
+}
+
+impl Runnable for Backup {
     fn run(&mut self) -> Result<()> {
         if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
             bail!("Backup validation failed: {}", e);
@@ -17,7 +27,7 @@ impl Runnable for BackupArgs {
     }
 }
 
-impl BackupArgs {
+impl Backup {
     fn backup(&self) -> Result<()> {
         let source = &self.source;
         let target = self.target.as_ref().unwrap();

@@ -1,9 +1,13 @@
-use crate::cli::{Runnable, UpdateArgs};
+use crate::cli::Runnable;
+use clap::Args;
 use color_eyre::eyre::{bail, Result};
 use reqwest::blocking::get;
 use version_compare::Version;
 
-impl Runnable for UpdateArgs {
+#[derive(Args, Debug)]
+pub struct Update {}
+
+impl Runnable for Update {
     fn run(&mut self) -> Result<()> {
         let url = "https://raw.githubusercontent.com/Diomeh/dsu/master/VERSION";
 

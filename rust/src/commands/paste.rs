@@ -1,9 +1,13 @@
+use clap::Args;
 use color_eyre::eyre::{bail, Result};
 use copypasta::{ClipboardContext, ClipboardProvider};
 
-use crate::cli::{PasteArgs, Runnable};
+use crate::cli::Runnable;
 
-impl Runnable for PasteArgs {
+#[derive(Args, Debug)]
+pub struct Paste {}
+
+impl Runnable for Paste {
     fn run(&mut self) -> Result<()> {
         let mut ctx = match ClipboardContext::new() {
             Ok(ctx) => ctx,

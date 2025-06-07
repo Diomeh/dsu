@@ -1,3 +1,4 @@
+use clap::Args;
 use color_eyre::eyre::{bail, eyre, Result};
 use flate2::read::GzDecoder;
 use std::{
@@ -7,9 +8,27 @@ use std::{
 };
 use tempfile::tempdir;
 
-use crate::cli::{Runnable, XtractArgs};
+use crate::cli::Runnable;
 
-impl Runnable for XtractArgs {
+#[derive(Args, Debug)]
+pub struct Xtract {
+    /// Archive to extract
+    pub archive: PathBuf,
+
+    /// Destination directory
+    #[arg(default_value = ".")]
+    pub destination: PathBuf,
+
+    /// Only print actions, without performing them
+    #[arg(long, short = 'n')]
+    pub dry: bool,
+
+    /// List files in archive
+    #[arg(long, short = 'l')]
+    pub list: bool,
+}
+
+impl Runnable for Xtract {
     fn run(&mut self) -> Result<()> {
         // implies exists() == true
         if !self.archive.is_file() {
@@ -20,7 +39,7 @@ impl Runnable for XtractArgs {
     }
 }
 
-impl XtractArgs {
+impl Xtract {
     fn get_destination(&self) -> Result<PathBuf> {
         let filename = self.archive.file_name().unwrap();
         let filename = filename.to_string_lossy();
