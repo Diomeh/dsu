@@ -1,5 +1,5 @@
 use ambassador::{delegatable_trait, Delegate};
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use color_eyre::eyre::Result;
 
 use crate::commands::{
@@ -16,29 +16,71 @@ use crate::commands::{
 )]
 /// Main CLI
 pub struct Cli {
-    /// Show debug logs
-    #[arg(short, long, global = true)]
-    pub verbose: bool,
+    /// Verbosity level
+    #[clap(short, long, global = true, require_equals = true, value_name = "LEVEL", default_value = "info")]
+    pub verbosity: Verbosity,
 
-    /// Check for updates
-    #[arg(long, short = 'u')]
-    pub update: bool,
+    /// Suppress output
+    #[clap(short, long, global = true)]
+    pub quiet: bool,
 
-    /// Utility to be executed
+    /// Set colored output
+    #[clap(short, long, global = true, require_equals = true, value_name = "OPTION", default_value = "auto")]
+    pub color: Color,
+
+    /// Disable color output
+    #[clap(long, global = true)]
+    pub no_color: bool,
+
+    /// Simulate execution
+    #[clap(short, long, global = true)]
+    pub dry_run: bool,
+
+    /// Prompt behavior mode
+    #[clap(short, long, global = true, require_equals = true, value_name = "OPTION", default_value = "ask")]
+    pub prompt: Prompt,
+
+    /// Answer "yes" to all prompts
+    #[clap(short, long, global = true)]
+    pub yes: bool,
+
+    /// Answer "no" to all prompts
+    #[clap(short, long, global = true)]
+    pub no: bool,
+
+    /// Command to be executed
     #[command(subcommand)]
     command: Commands,
 }
 
 impl Cli {
     pub fn run(&mut self) -> Result<()> {
-        if self.verbose {
-            // TODO: Implement verbose mode
-            eprintln!("WARNING: Verbose mode support is not implemented yet");
-        }
-
         // Runnable::run cannot be public so cli.command.run() is not possible from main.rs
         self.command.run()
     }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Verbosity {
+    Off,
+    Error,
+    Warn,
+    Info,
+    Debug,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Color {
+    Auto,
+    On,
+    Off,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Prompt {
+    Ask,
+    Yes,
+    No,
 }
 
 #[delegatable_trait]

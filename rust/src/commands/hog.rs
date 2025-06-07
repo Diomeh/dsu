@@ -15,7 +15,7 @@ pub struct Hog {
     pub human_readable: bool,
 
     /// Number of items to show
-    #[arg(long, short = 'n', default_value = "10")]
+    #[arg(long, short, default_value = "10")]
     pub limit: usize,
 }
 

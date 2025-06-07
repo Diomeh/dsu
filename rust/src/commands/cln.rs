@@ -11,16 +11,12 @@ pub struct Cln {
     #[arg(default_value = ".")]
     pub paths: Vec<PathBuf>,
 
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-
     /// Clean directories recursively
     #[arg(long, short = 'r', default_value = "true")]
     pub recursive: bool,
 
     /// Recurse depth
-    #[arg(long, short = 'd', default_value = "1")]
+    #[arg(long, short = 'e', default_value = "1")]
     pub depth: Option<usize>,
 
     /// Overwrite existing files without prompting
@@ -109,14 +105,6 @@ impl Cln {
             .to_string();
 
         let clean_path = path.with_file_name(&clean_filename);
-
-        if self.dry {
-            println!("{:?} -> {:?}", path, clean_path);
-            if clean_path.exists() {
-                println!("Note: {:?} would overwrite existing file", clean_path);
-            }
-            return;
-        }
 
         if self.force == "n" {
             if clean_path.exists() {

@@ -13,15 +13,11 @@ pub struct Restore {
 
     /// Destination to which the source element will be restored (current dir by default)
     pub target: Option<PathBuf>,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
 }
 
 impl Runnable for Restore {
     fn run(&mut self) -> Result<()> {
-        if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
+        if let Err(e) = validate_paths(&self.source, &mut self.target, false) {
             bail!("Restore validation failed: {}", e);
         }
 
@@ -54,12 +50,6 @@ impl Restore {
         } else {
             target.with_file_name(target_filename)
         };
-
-        // Check for dry run
-        if self.dry {
-            println!("Would restore {:?} to {:?}", source, target_path);
-            return Ok(());
-        }
 
         // Prompt for confirmation
         if target_path.exists()

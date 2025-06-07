@@ -19,10 +19,6 @@ pub struct Xtract {
     #[arg(default_value = ".")]
     pub destination: PathBuf,
 
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-
     /// List files in archive
     #[arg(long, short = 'l')]
     pub list: bool,

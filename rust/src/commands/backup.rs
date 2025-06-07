@@ -11,15 +11,11 @@ pub struct Backup {
 
     /// Destination to which the source element will be backed up (current dir by default)
     pub target: Option<PathBuf>,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
 }
 
 impl Runnable for Backup {
     fn run(&mut self) -> Result<()> {
-        if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
+        if let Err(e) = validate_paths(&self.source, &mut self.target, false) {
             bail!("Backup validation failed: {}", e);
         }
 
@@ -39,7 +35,7 @@ impl Backup {
 
         // is_dir() implies exists() == true
         // This may not necessarily be true when doing a dry run
-        if (self.dry && !target.exists()) || target.is_dir() {
+        if (!target.exists()) || target.is_dir() {
             // target/filename.timestamp.bak
             backup_path = target.join(format!("{}.{}.bak", filename.to_string_lossy(), timestamp));
         } else {
@@ -55,12 +51,6 @@ impl Backup {
             }
 
             backup_path = target.with_file_name(format!("{}.bak", target_filename));
-        }
-
-        // Check for dry run
-        if self.dry {
-            println!("Would back up {:?} to {:?}", source, backup_path);
-            return Ok(());
         }
 
         // Check if the target path exists
