@@ -1,7 +1,11 @@
 use ambassador::{delegatable_trait, Delegate};
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use color_eyre::eyre::Result;
-use std::path::PathBuf;
+
+use crate::commands::{
+    backup::Backup, cln::Cln, copy::Copy, hog::Hog, paste::Paste, restore::Restore, update::Update,
+    xtract::Xtract,
+};
 
 #[derive(Parser)]
 #[command(
@@ -12,29 +16,71 @@ use std::path::PathBuf;
 )]
 /// Main CLI
 pub struct Cli {
-    /// Show debug logs
-    #[arg(short, long, global = true)]
-    pub verbose: bool,
+    /// Verbosity level
+    #[clap(short, long, global = true, require_equals = true, value_name = "LEVEL", default_value = "info")]
+    pub verbosity: Verbosity,
 
-    /// Check for updates
-    #[arg(long, short = 'u')]
-    pub update: bool,
+    /// Suppress output
+    #[clap(short, long, global = true)]
+    pub quiet: bool,
 
-    /// Utility to be executed
+    /// Set colored output
+    #[clap(short, long, global = true, require_equals = true, value_name = "OPTION", default_value = "auto")]
+    pub color: Color,
+
+    /// Disable color output
+    #[clap(long, global = true)]
+    pub no_color: bool,
+
+    /// Simulate execution
+    #[clap(short, long, global = true)]
+    pub dry_run: bool,
+
+    /// Prompt behavior mode
+    #[clap(short, long, global = true, require_equals = true, value_name = "OPTION", default_value = "ask")]
+    pub prompt: Prompt,
+
+    /// Answer "yes" to all prompts
+    #[clap(short, long, global = true)]
+    pub yes: bool,
+
+    /// Answer "no" to all prompts
+    #[clap(short, long, global = true)]
+    pub no: bool,
+
+    /// Command to be executed
     #[command(subcommand)]
-    command: Utilities,
+    command: Commands,
 }
 
 impl Cli {
     pub fn run(&mut self) -> Result<()> {
-        if self.verbose {
-            // TODO: Implement verbose mode
-            eprintln!("WARNING: Verbose mode support is not implemented yet");
-        }
-
         // Runnable::run cannot be public so cli.command.run() is not possible from main.rs
         self.command.run()
     }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Verbosity {
+    Off,
+    Error,
+    Warn,
+    Info,
+    Debug,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Color {
+    Auto,
+    On,
+    Off,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum Prompt {
+    Ask,
+    Yes,
+    No,
 }
 
 #[delegatable_trait]
@@ -44,112 +90,21 @@ pub trait Runnable {
 
 #[derive(Subcommand, Debug, Delegate)]
 #[delegate(Runnable)]
-enum Utilities {
+enum Commands {
     /// Creates a timestamped backup of a file or directory
-    Backup(BackupArgs),
+    Backup(Backup),
     /// Restores a file or directory from a timestamped backup
-    Restore(RestoreArgs),
+    Restore(Restore),
     /// Removes non-ascii characters from file names
-    Cln(ClnArgs),
+    Cln(Cln),
     /// Copy STDOUT to clipboard
-    Copy(CopyArgs),
+    Copy(Copy),
     /// Print disk usage of a directory
-    Hog(HogArgs),
+    Hog(Hog),
     /// Paste clipboard to STDIN
-    Paste(PasteArgs),
+    Paste(Paste),
     /// Archive extraction utility
-    Xtract(XtractArgs),
+    Xtract(Xtract),
     /// Check for updates
-    Update(UpdateArgs),
+    Update(Update),
 }
-
-#[derive(Args, Debug)]
-pub struct BackupArgs {
-    /// Source element to be backed up
-    pub source: PathBuf,
-
-    /// Destination to which the source element will be backed up (current dir by default)
-    pub target: Option<PathBuf>,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct RestoreArgs {
-    /// Source element to be restored
-    pub source: PathBuf,
-
-    /// Destination to which the source element will be restored (current dir by default)
-    pub target: Option<PathBuf>,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct ClnArgs {
-    /// Paths to be cleaned
-    #[arg(default_value = ".")]
-    pub paths: Vec<PathBuf>,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-
-    /// Clean directories recursively
-    #[arg(long, short = 'r', default_value = "true")]
-    pub recursive: bool,
-
-    /// Recurse depth
-    #[arg(long, short = 'd', default_value = "1")]
-    pub depth: Option<usize>,
-
-    /// Overwrite existing files without prompting
-    #[arg(long, short = 'f', default_value = "auto", value_parser = ["y", "n", "auto"])]
-    pub force: String,
-}
-
-#[derive(Args, Debug)]
-pub struct CopyArgs {}
-
-#[derive(Args, Debug)]
-pub struct HogArgs {
-    /// Directory to analyze
-    #[arg(default_value = ".")]
-    pub dir: PathBuf,
-
-    /// Human readable sizes
-    #[arg(long, short = 'H', default_value = "false")]
-    pub human_readable: bool,
-
-    /// Number of items to show
-    #[arg(long, short = 'n', default_value = "10")]
-    pub limit: usize,
-}
-
-#[derive(Args, Debug)]
-pub struct PasteArgs {}
-
-#[derive(Args, Debug)]
-pub struct XtractArgs {
-    /// Archive to extract
-    pub archive: PathBuf,
-
-    /// Destination directory
-    #[arg(default_value = ".")]
-    pub destination: PathBuf,
-
-    /// Only print actions, without performing them
-    #[arg(long, short = 'n')]
-    pub dry: bool,
-
-    /// List files in archive
-    #[arg(long, short = 'l')]
-    pub list: bool,
-}
-
-#[derive(Args, Debug)]
-pub struct UpdateArgs {}

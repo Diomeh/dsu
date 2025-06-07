@@ -1,11 +1,30 @@
+use crate::cli::Runnable;
+use clap::Args;
 use color_eyre::eyre::Result;
 use dialoguer::Confirm;
 use regex::Regex;
 use std::{fs::rename, path::PathBuf};
 
-use crate::cli::{ClnArgs, Runnable};
+#[derive(Args, Debug)]
+pub struct Cln {
+    /// Paths to be cleaned
+    #[arg(default_value = ".")]
+    pub paths: Vec<PathBuf>,
 
-impl Runnable for ClnArgs {
+    /// Clean directories recursively
+    #[arg(long, short = 'r', default_value = "true")]
+    pub recursive: bool,
+
+    /// Recurse depth
+    #[arg(long, short = 'e', default_value = "1")]
+    pub depth: Option<usize>,
+
+    /// Overwrite existing files without prompting
+    #[arg(long, short = 'f', default_value = "auto", value_parser = ["y", "n", "auto"])]
+    pub force: String,
+}
+
+impl Runnable for Cln {
     fn run(&mut self) -> Result<()> {
         // use the current directory if no paths are provided
         if self.paths.is_empty() {
@@ -26,7 +45,7 @@ impl Runnable for ClnArgs {
     }
 }
 
-impl ClnArgs {
+impl Cln {
     fn clean_files(&self, paths: &Vec<PathBuf>, depth: usize) -> Result<()> {
         let should_recurse = self.recursive && depth < self.depth.unwrap();
 
@@ -86,14 +105,6 @@ impl ClnArgs {
             .to_string();
 
         let clean_path = path.with_file_name(&clean_filename);
-
-        if self.dry {
-            println!("{:?} -> {:?}", path, clean_path);
-            if clean_path.exists() {
-                println!("Note: {:?} would overwrite existing file", clean_path);
-            }
-            return;
-        }
 
         if self.force == "n" {
             if clean_path.exists() {

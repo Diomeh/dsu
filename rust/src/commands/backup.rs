@@ -1,15 +1,21 @@
+use crate::{cli::Runnable, utils::file_keeper::validate_paths};
+use clap::Args;
 use color_eyre::{eyre::bail, eyre::Result};
 use dialoguer::Confirm;
 use std::{fs, path::PathBuf};
 
-use crate::{
-    cli::{BackupArgs, Runnable},
-    utils::file_keeper::validate_paths,
-};
+#[derive(Args, Debug)]
+pub struct Backup {
+    /// Source element to be backed up
+    pub source: PathBuf,
 
-impl Runnable for BackupArgs {
+    /// Destination to which the source element will be backed up (current dir by default)
+    pub target: Option<PathBuf>,
+}
+
+impl Runnable for Backup {
     fn run(&mut self) -> Result<()> {
-        if let Err(e) = validate_paths(&self.source, &mut self.target, self.dry) {
+        if let Err(e) = validate_paths(&self.source, &mut self.target, false) {
             bail!("Backup validation failed: {}", e);
         }
 
@@ -17,7 +23,7 @@ impl Runnable for BackupArgs {
     }
 }
 
-impl BackupArgs {
+impl Backup {
     fn backup(&self) -> Result<()> {
         let source = &self.source;
         let target = self.target.as_ref().unwrap();
@@ -29,7 +35,7 @@ impl BackupArgs {
 
         // is_dir() implies exists() == true
         // This may not necessarily be true when doing a dry run
-        if (self.dry && !target.exists()) || target.is_dir() {
+        if (!target.exists()) || target.is_dir() {
             // target/filename.timestamp.bak
             backup_path = target.join(format!("{}.{}.bak", filename.to_string_lossy(), timestamp));
         } else {
@@ -45,12 +51,6 @@ impl BackupArgs {
             }
 
             backup_path = target.with_file_name(format!("{}.bak", target_filename));
-        }
-
-        // Check for dry run
-        if self.dry {
-            println!("Would back up {:?} to {:?}", source, backup_path);
-            return Ok(());
         }
 
         // Check if the target path exists
